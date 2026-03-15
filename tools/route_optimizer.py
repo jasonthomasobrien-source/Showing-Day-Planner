@@ -465,13 +465,13 @@ def optimize_route(
     # ── Append return leg ─────────────────────────────────────────────────────
     if return_address and route:
         last_stop = route[-1]
-        last_departure_sec = slots[-1]["showing_end"]
+        last_departure_dt = slots[-1]["showing_end"]
         travel_home_min = last_stop["travel_to_next_minutes"] or 0
-        arrive_home_sec = last_departure_sec + travel_home_min * 60
+        arrive_home_dt = last_departure_dt + timedelta(minutes=travel_home_min)
         route.append({
             "order": len(route) + 1,
             "address": return_address,
-            "arrival_time": _format_time(arrive_home_sec),
+            "arrival_time": _format_time(arrive_home_dt),
             "showing_start": None,
             "showing_end": None,
             "departure_time": None,
