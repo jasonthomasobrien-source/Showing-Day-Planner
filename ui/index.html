@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShowingDay — PREMIERE Group</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     STATUS BAR — always visible, shows session summary
+════════════════════════════════════════════════════════════════ -->
+<div id="status-bar">
+  <div class="status-bar-brand">
+    <div class="logo-icon">S</div>
+    <span class="brand-name">ShowingDay</span>
+  </div>
+
+  <div class="status-bar-stats" id="status-bar-stats">
+    <span class="status-pill session-date">No active session</span>
+  </div>
+
+  <div class="status-bar-actions">
+    <button class="btn btn-ghost btn-sm" id="btn-reset-session" title="Reset Session">↺ Reset</button>
+  </div>
+</div>
+
+<!-- Webhook notification strip -->
+<div id="webhook-strip">
+  <span class="webhook-icon">🔄</span>
+  <span class="webhook-message"></span>
+  <button class="webhook-dismiss" title="Dismiss">×</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     APP CONTAINER
+════════════════════════════════════════════════════════════════ -->
+<div id="app-container">
+
+  <!-- Navigation tabs (shown after start screen) -->
+  <div style="padding:12px 24px 0;max-width:860px;margin:0 auto;" id="nav-container">
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-screen="start">
+        <span>➕</span> Session Setup
+      </button>
+      <button class="nav-tab" data-screen="route">
+        <span>🗺</span> Route
+      </button>
+      <button class="nav-tab" data-screen="status">
+        <span>📋</span> Properties
+      </button>
+      <button class="nav-tab" data-screen="delivery">
+        <span>📤</span> Deliver
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 1 — SESSION SETUP
+  ════════════════════════════════════════════════ -->
+  <div class="screen active" id="screen-start">
+
+    <div class="screen-header">
+      <div class="eyebrow">PREMIERE Group · Real Broker LLC</div>
+      <h1>Plan Your Showing Day</h1>
+      <p class="subtitle">Enter client and property details to generate an optimized showing route.</p>
+    </div>
+
+    <!-- ── Client Lookup ── -->
+    <div class="client-lookup-section">
+      <div class="section-label">Step 1 — Client</div>
+
+      <div class="lookup-row">
+        <input
+          type="text"
+          id="client-lookup-input"
+          placeholder="Search client by name (e.g. Sarah Johnson)…"
+          autocomplete="off"
+        >
+        <button class="btn btn-primary" id="btn-lookup">Search CRM</button>
+        <button class="btn btn-secondary" id="btn-manual-entry">Manual Entry</button>
+      </div>
+
+      <!-- Client confirmation card (shown after successful lookup) -->
+      <div id="client-confirm-card">
+        <div class="client-card-inner">
+          <div class="client-card-info">
+            <div class="client-name">
+              <span id="client-display-name">—</span>
+              <span class="crm-source" id="client-display-source">CRM</span>
+            </div>
+            <div class="client-meta">
+              <span id="client-display-email">—</span>
+              &nbsp;·&nbsp;
+              <span id="client-display-phone">—</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showManualEntry()">Edit</button>
+        </div>
+      </div>
+
+      <!-- Manual entry form (shown when CRM lookup fails) -->
+      <div id="client-manual-entry">
+        <div class="form-field">
+          <label>Full Name *</label>
+          <input type="text" id="manual-client-name" placeholder="First and Last Name">
+        </div>
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" id="manual-client-email" placeholder="client@email.com">
+        </div>
+        <div class="form-field" style="align-self:flex-end;">
+          <label>Phone</label>
+          <input type="text" id="manual-client-phone" placeholder="(616) 555-0000">
+        </div>
+        <div class="form-field" style="align-self:flex-end;justify-content:flex-end;flex-direction:row;gap:8px;padding-top:20px;">
+          <button class="btn btn-secondary btn-sm" onclick="$('client-manual-entry').classList.remove('visible')">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="btn-save-manual-client">Save Client</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Session Details ── -->
+    <div class="form-section">
+      <div class="section-label">Step 2 — Session Details</div>
+      <div class="form-grid three-col">
+        <div class="form-field">
+          <label>Date</label>
+          <input type="date" id="session-date">
+        </div>
+        <div class="form-field">
+          <label>Start Time</label>
+          <input type="time" id="start-time" value="13:00">
+        </div>
+        <div class="form-field">
+          <label>End Time</label>
+          <input type="time" id="end-time" value="18:00">
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top:14px;">
+        <div class="form-field">
+          <label>Starting Location</label>
+          <input type="text" id="start-address" placeholder="Plainwell, MI 49080">
+        </div>
+        <div class="form-field">
+          <label>Max Showing Time (minutes)</label>
+          <input type="number" id="max-showing-minutes" value="30" min="15" max="120" step="5">
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top:14px;">
+        <div class="form-field">
+          <label>Scheduling Direction</label>
+          <div class="direction-toggle">
+            <button class="active" data-direction="start-loaded" title="First showing starts as early as possible">
+              🏃 Start-Loaded
+            </button>
+            <button data-direction="end-loaded" title="Last showing ends at your window close time">
+              🏁 End-Loaded
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Property Addresses ── -->
+    <div class="form-section">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Step 3 — Properties to Show</span>
+        <button class="btn btn-ghost btn-sm" id="btn-add-address">+ Add Address</button>
+      </div>
+
+      <div id="address-list"></div>
+
+      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);">
+        Tip: Press Enter after each address to add the next one. Include full address with city and state.
+      </div>
+    </div>
+
+    <!-- ── Plan display area ── -->
+    <div id="plan-display" class="plan-display">
+      <div class="plan-header">PLAN</div>
+      <ol id="plan-steps"></ol>
+    </div>
+
+    <!-- ── Optimize button ── -->
+    <div style="text-align:center;padding:8px 0 48px;">
+      <button class="btn btn-primary btn-lg" id="btn-optimize" style="min-width:220px;">
+        🗺 Optimize Route
+      </button>
+    </div>
+
+  </div><!-- end screen-start -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 2 — ROUTE DISPLAY
+  ════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-route">
+
+    <!-- Map -->
+    <div id="map-container">
+      <div id="map">
+        <div class="map-placeholder">
+          <div class="map-icon">🗺</div>
+          <div style="font-size:14px;color:var(--text-muted);">Optimize a route to see the map</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Route sidebar -->
+    <div id="route-sidebar">
+      <div class="route-sidebar-header">
+        <h2 class="display-font">Optimized Route</h2>
+        <div class="route-meta">
+          <span class="route-stat">⏱ Total: <strong id="route-total-duration">—</strong></span>
+        </div>
+      </div>
+
+      <!-- Warning banner (hidden by default) -->
+      <div id="route-warning-banner" class="route-warning-banner" style="display:none;"></div>
+
+      <div id="route-stops-list" class="route-stops-list">
+        <div class="text-muted text-sm" style="text-align:center;padding:40px;">
+          No route loaded yet.
+        </div>
+      </div>
+
+      <div class="route-actions">
+        <button class="btn btn-primary btn-full" id="btn-add-calendar">
+          📅 Add to Calendar
+        </button>
+        <button class="btn btn-secondary btn-full" id="btn-goto-status">
+          Continue to Properties →
+        </button>
+        <button class="btn btn-ghost btn-full btn-sm" id="btn-edit-route">
+          ← Edit Inputs
+        </button>
+      </div>
+    </div>
+
+  </div><!-- end screen-route -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 3 — PROPERTY STATUS PANEL
+  ════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-status">
+
+    <h2 class="section-title display-font">Property Status</h2>
+    <p class="section-subtitle">
+      Toggle status for each showing. Confirmed triggers property research. Declined removes calendar event.
+    </p>
+
+    <!-- Plan display area -->
+    <div id="plan-display-status" class="plan-display" style="display:none;">
+      <div class="plan-header">PLAN</div>
+      <ol></ol>
+    </div>
+
+    <div id="property-cards-container">
+      <div class="text-muted text-sm" style="text-align:center;padding:40px;">
+        No properties yet — set up a session and optimize a route first.
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:24px 0 48px;">
+      <button class="btn btn-primary btn-lg" id="btn-goto-delivery">
+        Build Client Page →
+      </button>
+    </div>
+
+  </div><!-- end screen-status -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 4 — CLIENT DELIVERY
+  ════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-delivery">
+
+    <h2 class="section-title display-font">Deliver to Client</h2>
+    <p class="section-subtitle">Generate the client-facing page and send via Gmail.</p>
+
+    <!-- Summary counts -->
+    <div class="delivery-summary">
+      <div class="delivery-stat">
+        <div class="ds-num" id="delivery-count-confirmed">—</div>
+        <div class="ds-label">Confirmed</div>
+      </div>
+      <div class="delivery-stat">
+        <div class="ds-num" id="delivery-count-declined">—</div>
+        <div class="ds-label">Declined</div>
+      </div>
+      <div class="delivery-stat">
+        <div class="ds-num" id="delivery-count-pending">—</div>
+        <div class="ds-label">Pending</div>
+      </div>
+    </div>
+
+    <!-- Build page -->
+    <div class="delivery-form">
+      <div class="section-label">Client Page Options</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <input type="checkbox" id="toggle-red-flags" style="width:auto;">
+        <label for="toggle-red-flags" style="font-size:13px;color:var(--text-muted);cursor:pointer;">
+          Include disclosure red flags on client page
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-primary" id="btn-build-page">Build Client Page</button>
+        <a id="client-page-preview-link" href="#" target="_blank" class="btn btn-secondary" style="display:none;">
+          Preview Page
+        </a>
+      </div>
+    </div>
+
+    <!-- Send email -->
+    <div class="delivery-form">
+      <div class="section-label">Send to Client</div>
+      <div class="form-field" style="margin-bottom:14px;">
+        <label>Client Email</label>
+        <input type="email" id="delivery-email" placeholder="Auto-filled from CRM lookup">
+      </div>
+      <button class="btn btn-primary btn-lg" id="btn-send-client" style="min-width:200px;">
+        📧 Send to Client
+      </button>
+      <div class="text-xs text-muted mt-8">
+        Gmail API required. If not configured, a copyable email draft will appear below.
+      </div>
+    </div>
+
+    <!-- Plan display area -->
+    <div id="plan-display-delivery" class="plan-display">
+      <div class="plan-header">PLAN</div>
+      <ol id="plan-steps-delivery"></ol>
+    </div>
+
+    <!-- Email draft fallback -->
+    <div id="email-draft-modal" class="email-draft-modal">
+      <div class="draft-header">
+        <div class="draft-subject">Email Draft — Copy and send manually</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-secondary" id="btn-copy-email-draft">📋 Copy</button>
+          <button class="btn btn-sm btn-ghost" id="btn-close-email-draft">×</button>
+        </div>
+      </div>
+      <div class="email-draft-body" id="email-draft-body"></div>
+    </div>
+
+  </div><!-- end screen-delivery -->
+
+</div><!-- end app-container -->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     CONFIRM MODAL (generic)
+════════════════════════════════════════════════════════════════ -->
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modal-title">Confirm Action</h3>
+    <p id="modal-message">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-close-modal">Cancel</button>
+      <button class="btn btn-primary" id="btn-confirm-modal">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

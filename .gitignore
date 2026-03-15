@@ -1,0 +1,96 @@
+# Environment & credentials — NEVER commit these
+.env
+*.env
+.env.local
+.env.*.local
+
+# Runtime session files
+session_state.json
+run_log.json
+
+# Generated output (keep directory structure, ignore contents)
+output/*
+!output/.gitkeep
+sessions/archive/*
+!sessions/archive/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.eggs/
+*.egg-info/
+*.egg-link
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Node / frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Vercel
+.vercel/
+
+# Google OAuth token files (generated at runtime)
+token.json
+token_calendar.json
+token_gmail.json
+*_token.json
+
+# Uploaded disclosure PDFs (contain PII)
+*.pdf
+
+# Logs
+*.log
+logs/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
