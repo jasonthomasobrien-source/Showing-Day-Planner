@@ -211,6 +211,7 @@ def optimize_route_route():
         window_end_time = body.get("window_end_time")
         max_showing_minutes = int(body.get("max_showing_minutes", 30))
         direction = body.get("direction", "start-loaded")
+        return_address = body.get("return_address") or None
 
         if not addresses:
             return api_error("No addresses provided", 400)
@@ -224,7 +225,8 @@ def optimize_route_route():
             session_datetime=session_datetime,
             window_end_time=window_end_time,
             max_showing_minutes=max_showing_minutes,
-            direction=direction
+            direction=direction,
+            return_address=return_address
         )
 
         log_tool_call("route_optimizer", body, result)

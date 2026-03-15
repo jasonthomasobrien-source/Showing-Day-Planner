@@ -163,10 +163,24 @@
       </div>
     </div>
 
+    <!-- ── Return Destination ── -->
+    <div class="form-section">
+      <div class="section-label">Return Destination</div>
+      <div class="return-destination-toggle">
+        <button class="active" data-return="home">🏠 Home</button>
+        <button data-return="office">🏢 Office</button>
+        <button data-return="custom">📍 Custom</button>
+        <button data-return="none">✕ None</button>
+      </div>
+      <div id="return-custom-wrap" style="display:none;margin-top:10px;">
+        <input type="text" id="return-custom-address" placeholder="Return address…">
+      </div>
+    </div>
+
     <!-- ── Property Addresses ── -->
     <div class="form-section">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>Step 3 — Properties to Show</span>
+        <span>Properties to Show</span>
         <button class="btn btn-ghost btn-sm" id="btn-add-address">+ Add Address</button>
       </div>
 

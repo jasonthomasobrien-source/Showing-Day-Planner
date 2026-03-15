@@ -436,6 +436,35 @@ select option {
   font-weight: 700;
 }
 
+/* ── Return destination toggle (same style as direction-toggle) ── */
+.return-destination-toggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.return-destination-toggle button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.return-destination-toggle button.active {
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+}
+
 /* ── Address list ───────────────────────────────────────────── */
 #address-list {
   display: flex;

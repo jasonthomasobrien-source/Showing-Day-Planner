@@ -21,6 +21,8 @@ const AppState = {
   pollInterval: null,
   pendingAction: null,
   propertyResearch: {},  // address → listing data
+  returnDestination: 'home',   // 'home' | 'office' | 'custom' | 'none'
+  returnCustomAddress: '',
 };
 
 // ── Utility ────────────────────────────────────────────────────────────────────
@@ -304,6 +306,38 @@ function renderAddressList() {
   });
 }
 
+// ── Return destination ─────────────────────────────────────────────────────────
+function resolveReturnAddress(startAddress) {
+  switch (AppState.returnDestination) {
+    case 'home':
+      return AppState.config.default_start_address || startAddress;
+    case 'office':
+      return AppState.config.office_address || startAddress;
+    case 'custom':
+      return AppState.returnCustomAddress || null;
+    case 'none':
+    default:
+      return null;
+  }
+}
+
+function initReturnDestinationToggle() {
+  $$('.return-destination-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.return-destination-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      AppState.returnDestination = btn.dataset.return;
+      const wrap = $('return-custom-wrap');
+      if (wrap) wrap.style.display = AppState.returnDestination === 'custom' ? 'block' : 'none';
+    });
+  });
+  const customInput = $('return-custom-address');
+  if (customInput) {
+    customInput.addEventListener('input', e => { AppState.returnCustomAddress = e.target.value; });
+    attachAutocompleteWhenReady(customInput);
+  }
+}
+
 // ── Route optimization ─────────────────────────────────────────────────────────
 async function handleOptimizeRoute() {
   const addresses = AppState.addresses.filter(a => a.trim());
@@ -318,6 +352,7 @@ async function handleOptimizeRoute() {
   const startAddress = $('start-address')?.value || AppState.config.default_start_address || 'Plainwell, MI';
   const maxMinutes = parseInt($('max-showing-minutes')?.value || '30');
   const direction = $$('.direction-toggle .active')[0]?.dataset.direction || 'start-loaded';
+  const returnAddress = resolveReturnAddress(startAddress);
 
   if (!sessionDate) {
     showToast('Date required', 'Please select the showing day.', 'warning');
@@ -345,6 +380,7 @@ async function handleOptimizeRoute() {
       body: {
         addresses,
         start_address: startAddress,
+        return_address: returnAddress,
         session_datetime: sessionDatetime,
         window_end_time: endTime,
         max_showing_minutes: maxMinutes,
@@ -406,7 +442,23 @@ function renderRoute(routeData) {
   if (statsEl) statsEl.textContent = `${total_duration_minutes} min total`;
 
   // Sidebar stops
-  sidebar.innerHTML = route.map(stop => `
+  sidebar.innerHTML = route.map(stop => {
+    if (stop.is_return) {
+      return `
+        <div class="route-stop-card route-stop-return">
+          <div class="route-stop-header">
+            <div class="stop-number" style="background:var(--text-muted);font-size:14px;">🏠</div>
+            <div class="stop-address">${stop.address}</div>
+          </div>
+          <div class="stop-times">
+            <div class="stop-time-item">
+              <div class="stop-time-label">Arrive</div>
+              <div class="stop-time-value">${formatTime(stop.arrival_time)}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    return `
     <div class="route-stop-card" data-order="${stop.order}">
       <div class="route-stop-header">
         <div class="stop-number">${stop.order}</div>
@@ -428,15 +480,20 @@ function renderRoute(routeData) {
           <span>${stop.travel_to_next_minutes} min to next stop</span>
         </div>
       ` : ''}
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
-  // Initialize/update Google Map
-  if (AppState.map && AppState.config.maps_key) {
+  // Initialize/update Google Map.
+  // If AppState.map exists → render immediately.
+  // If Maps SDK is loading (key present, map not yet ready) → onGoogleMapsReady will
+  // call initRouteOnMap once the SDK fires, because AppState.route is already set.
+  // If no key → show placeholder.
+  if (AppState.map) {
     initRouteOnMap(route);
-  } else {
+  } else if (!AppState.config.maps_key) {
     renderMapPlaceholder(route.length);
   }
+  // else: SDK is loading — onGoogleMapsReady will pick up AppState.route automatically
 }
 
 function renderMapPlaceholder(stopCount) {
@@ -1185,6 +1242,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize with one blank address row
   AppState.addresses = [''];
   renderAddressList();
+  initReturnDestinationToggle();
 
   // Load config and session
   Promise.all([loadConfig(), loadSession()]);

@@ -142,6 +142,31 @@ def _get_travel_times_matrix(addresses: list, departure_dt: datetime) -> dict:
     return matrix
 
 
+def _get_return_travel_time(origin: str, destination: str, departure_time=None) -> int:
+    """Get travel time in minutes from the last stop to the return destination."""
+    if not GOOGLE_MAPS_API_KEY:
+        return 20  # mock fallback
+    try:
+        params = {
+            "origins": origin,
+            "destinations": destination,
+            "key": GOOGLE_MAPS_API_KEY,
+            "mode": "driving",
+            "units": "imperial",
+        }
+        if departure_time and isinstance(departure_time, (int, float)):
+            params["departure_time"] = int(departure_time)
+        resp = requests.get(DISTANCE_MATRIX_URL, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        element = data["rows"][0]["elements"][0]
+        if element["status"] == "OK":
+            return math.ceil(element["duration"]["value"] / 60)
+    except Exception as e:
+        print(f"[route_optimizer] WARNING: return travel time lookup failed: {e}")
+    return 20
+
+
 def _nearest_neighbor_tsp(start_address: str, addresses: list, matrix: dict) -> list:
     """
     Solve the TSP using nearest-neighbor heuristic.
@@ -262,7 +287,8 @@ def optimize_route(
     session_datetime: str,
     window_end_time: str = None,
     max_showing_minutes: int = 30,
-    direction: str = "start-loaded"
+    direction: str = "start-loaded",
+    return_address: str = None
 ) -> dict:
     """
     Main entry point for route optimization.
@@ -270,6 +296,8 @@ def optimize_route(
     Args:
         addresses: List of property address strings to show.
         start_address: Starting location (agent's home base).
+        return_address: Optional end destination (home/office/custom). If provided,
+                        a final return leg is appended to the route.
         session_datetime: ISO format or "YYYY-MM-DD HH:MM" string for session start.
         window_end_time: "HH:MM" end time string (e.g., "18:00"). Optional.
         max_showing_minutes: Maximum time per showing in minutes.
@@ -417,7 +445,12 @@ def optimize_route(
             next_idx = ordered_indices[order_pos + 1]
             travel_min = math.ceil(prop_matrix.get(prop_idx, {}).get(next_idx, 0) / 60)
         else:
-            travel_min = None
+            # Travel to return destination (or None if no return)
+            if return_address:
+                last_addr = addresses[prop_idx]
+                travel_min = _get_return_travel_time(last_addr, return_address, departure_time=slot["showing_end"])
+            else:
+                travel_min = None
 
         route.append({
             "order": order_pos + 1,
@@ -429,6 +462,23 @@ def optimize_route(
             "travel_to_next_minutes": travel_min
         })
 
+    # ── Append return leg ─────────────────────────────────────────────────────
+    if return_address and route:
+        last_stop = route[-1]
+        last_departure_sec = slots[-1]["showing_end"]
+        travel_home_min = last_stop["travel_to_next_minutes"] or 0
+        arrive_home_sec = last_departure_sec + travel_home_min * 60
+        route.append({
+            "order": len(route) + 1,
+            "address": return_address,
+            "arrival_time": _format_time(arrive_home_sec),
+            "showing_start": None,
+            "showing_end": None,
+            "departure_time": None,
+            "travel_to_next_minutes": None,
+            "is_return": True
+        })
+
     return {
         "status": "success",
         "data": {
@@ -436,7 +486,8 @@ def optimize_route(
             "total_duration_minutes": total_minutes,
             "fits_window": fits_window,
             "warnings": warnings,
-            "mock": False
+            "mock": False,
+            "return_address": return_address
         },
         "error": None
     }
