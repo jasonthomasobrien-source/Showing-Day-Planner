@@ -364,6 +364,10 @@ async function handleOptimizeRoute() {
   }
 
   const sessionDatetime = `${sessionDate} ${startTime}`;
+  if (new Date(sessionDatetime) < new Date()) {
+    showToast('Date is in the past', 'Please select today or a future date and time.', 'error');
+    return;
+  }
 
   // Show plan before proceeding
   showPlan([
