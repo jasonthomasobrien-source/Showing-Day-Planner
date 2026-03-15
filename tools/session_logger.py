@@ -59,10 +59,14 @@ def get_session() -> dict:
 
 
 def _write_session(state: dict) -> None:
-    """Write session state to disk (internal use only)."""
-    SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(SESSION_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, default=str)
+    """Write session state to disk (internal use only).
+    Silently skips on read-only filesystems (e.g. Vercel serverless)."""
+    try:
+        SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(SESSION_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2, default=str)
+    except OSError as e:
+        print(f"[session_logger] WARNING: Could not write session_state.json (read-only fs?): {e}")
 
 
 def update_session(updates: dict) -> dict:
@@ -199,9 +203,12 @@ def log_tool_call(tool_name: str, input_data: dict, result: dict) -> dict:
         }
         log.append(entry)
 
-        RUN_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(RUN_LOG_FILE, "w", encoding="utf-8") as f:
-            json.dump(log, f, indent=2, default=str)
+        try:
+            RUN_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(RUN_LOG_FILE, "w", encoding="utf-8") as f:
+                json.dump(log, f, indent=2, default=str)
+        except OSError as e:
+            print(f"[session_logger] WARNING: Could not write run_log.json (read-only fs?): {e}")
 
         return {"status": "success", "data": entry, "error": None}
 

@@ -370,5 +370,20 @@
 <div id="toast-container"></div>
 
 <script src="app.js"></script>
+<script>
+// Called by Google Maps SDK once loaded.
+// Signals Places is ready, flushes queued autocomplete inputs, and initializes the map.
+window.initGoogleMapsAutocomplete = function() {
+  window._googleMapsReady = true;
+  if (window._pendingAutocompleteInputs) {
+    window._pendingAutocompleteInputs.forEach(attachAutocomplete);
+    window._pendingAutocompleteInputs = [];
+  }
+  // Also initialize the map now that the SDK is loaded
+  if (typeof window.onGoogleMapsReady === 'function') {
+    window.onGoogleMapsReady();
+  }
+};
+</script>
 </body>
 </html>

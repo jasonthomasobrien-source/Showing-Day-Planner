@@ -288,7 +288,7 @@ function renderAddressList() {
     list.appendChild(row);
   });
 
-  // Bind events
+  // Bind events + attach Places autocomplete
   $$('#address-list input').forEach(input => {
     input.addEventListener('input', e => {
       AppState.addresses[parseInt(e.target.dataset.index)] = e.target.value;
@@ -296,6 +296,7 @@ function renderAddressList() {
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); addAddressRow(); }
     });
+    attachAutocompleteWhenReady(input);
   });
 
   $$('#address-list .btn-remove-addr').forEach(btn => {
@@ -463,11 +464,47 @@ function initGoogleMaps(apiKey) {
   if (window.google?.maps) return; // Already loaded
 
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=onGoogleMapsReady`;
+  // Load Places library alongside Maps; callback triggers autocomplete setup
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsAutocomplete`;
   script.async = true;
   script.defer = true;
   document.head.appendChild(script);
 }
+
+// Attach a Places Autocomplete instance to a single input, biased to US addresses.
+function attachAutocomplete(input) {
+  if (!window.google?.maps?.places) return;
+  if (input.dataset.autocompleteAttached) return;
+  input.dataset.autocompleteAttached = 'true';
+
+  const ac = new google.maps.places.Autocomplete(input, {
+    types: ['address'],
+    componentRestrictions: { country: 'us' },
+    fields: ['formatted_address']
+  });
+
+  ac.addListener('place_changed', () => {
+    const place = ac.getPlace();
+    if (place?.formatted_address) {
+      input.value = place.formatted_address;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+}
+
+// Queue autocomplete attachment if Maps SDK isn't loaded yet.
+function attachAutocompleteWhenReady(input) {
+  if (window._googleMapsReady) {
+    attachAutocomplete(input);
+  } else {
+    window._pendingAutocompleteInputs = window._pendingAutocompleteInputs || [];
+    window._pendingAutocompleteInputs.push(input);
+  }
+}
+
+// Called by the Maps SDK callback (defined in index.html) after Places loads.
+// Also initializes the map so the old onGoogleMapsReady logic still runs.
+window._googleMapsReady = false;
 
 window.onGoogleMapsReady = function() {
   const mapDiv = $('map');
@@ -1151,6 +1188,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load config and session
   Promise.all([loadConfig(), loadSession()]);
+
+  // Attach autocomplete to start-address field once Maps loads
+  const startAddrInput = $('start-address');
+  if (startAddrInput) attachAutocompleteWhenReady(startAddrInput);
 
   // Start polling every 10 seconds
   AppState.pollInterval = setInterval(pollSession, 10000);
