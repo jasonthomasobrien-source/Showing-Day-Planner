@@ -6,32 +6,33 @@
   <title>Sign In — ShowingDay</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
   <style>
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --navy:       #0D1B2A;
-      --navy-mid:   #1a2d42;
-      --navy-card:  #132236;
-      --gold:       #C9A84C;
-      --gold-light: #e0c068;
+      --navy:       #0c1220;
+      --navy-mid:   #111827;
+      --navy-card:  #1a2232;
+      --gold:       #FFB81C;
+      --gold-light: #ffc53d;
       --white:      #FFFFFF;
-      --white-soft: #f0f4f8;
-      --text-muted: #8fa4bc;
-      --text-mid:   #bccfe0;
-      --border:     rgba(201, 168, 76, 0.18);
-      --border-soft: rgba(255, 255, 255, 0.08);
+      --white-soft: #e8edf7;
+      --text-muted: #8a9bbf;
+      --text-mid:   #c0cce0;
+      --border:     rgba(255, 255, 255, 0.08);
+      --border-soft: rgba(255, 255, 255, 0.05);
       --green:      #27c17c;
       --radius:     10px;
       --radius-lg:  16px;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--navy);
-      color: var(--white);
+      color: var(--white-soft);
+      -webkit-font-smoothing: antialiased;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -50,7 +51,7 @@
       transform: translateX(-50%);
       width: 800px;
       height: 600px;
-      background: radial-gradient(ellipse, rgba(201, 168, 76, 0.06) 0%, transparent 65%);
+      background: radial-gradient(ellipse, rgba(255, 184, 28, 0.06) 0%, transparent 65%);
       pointer-events: none;
     }
 
@@ -65,8 +66,8 @@
       position: relative;
       box-shadow:
         0 0 0 1px rgba(255,255,255,0.03),
-        0 32px 80px rgba(0, 0, 0, 0.45),
-        0 0 40px rgba(201, 168, 76, 0.05);
+        0 32px 80px rgba(0, 0, 0, 0.5),
+        0 0 40px rgba(255, 184, 28, 0.04);
     }
 
     /* ── Logo ── */
@@ -92,17 +93,20 @@
     }
 
     .logo-wordmark {
-      font-family: 'DM Serif Display', serif;
-      font-size: 26px;
-      color: var(--gold);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
       letter-spacing: -0.3px;
       line-height: 1;
     }
 
     /* ── Heading ── */
     .login-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 24px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
       color: var(--white);
       text-align: center;
       margin-bottom: 6px;
@@ -161,11 +165,11 @@
     }
 
     .form-field input {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: var(--radius);
       color: var(--white);
-      font-family: 'Inter', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 14px;
       padding: 11px 14px;
       transition: all 0.2s ease;
@@ -174,9 +178,9 @@
     }
 
     .form-field input:focus {
-      border-color: var(--gold);
-      background: rgba(201, 168, 76, 0.06);
-      box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.1);
+      border-color: rgba(255, 184, 28, 0.6);
+      background: rgba(255, 184, 28, 0.05);
+      box-shadow: 0 0 0 3px rgba(255, 184, 28, 0.1);
     }
 
     .form-field input::placeholder { color: rgba(255, 255, 255, 0.25); }
@@ -185,8 +189,8 @@
     .btn-signin {
       width: 100%;
       background: var(--gold);
-      color: var(--navy);
-      font-family: 'Inter', sans-serif;
+      color: #0c1220;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       font-weight: 700;
       padding: 13px 24px;
@@ -204,7 +208,7 @@
 
     .btn-signin:hover:not(:disabled) {
       background: var(--gold-light);
-      box-shadow: 0 6px 20px rgba(201, 168, 76, 0.35);
+      box-shadow: 0 6px 20px rgba(255, 184, 28, 0.35);
       transform: translateY(-1px);
     }
 

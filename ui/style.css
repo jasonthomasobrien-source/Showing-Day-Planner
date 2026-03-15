@@ -1,29 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════
    ShowingDay — Agent UI Stylesheet
-   Design: Dark ops tool meets luxury real estate branding
-   Palette: Navy #0D1B2A base · Gold #C9A84C accent · White text
+   Design: Professional ops tool · Amber accent · DM Sans
+   Palette: #0c1220 base · #FFB81C amber · #e8edf7 text
    ═══════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
 
 /* ── Custom properties ──────────────────────────────────────── */
 :root {
-  --navy:        #0D1B2A;
-  --navy-mid:    #1a2d42;
-  --navy-light:  #243b55;
-  --navy-card:   #162232;
-  --gold:        #C9A84C;
-  --gold-light:  #e0c068;
-  --gold-dim:    #8a6f2e;
+  --navy:        #0c1220;
+  --navy-mid:    #111827;
+  --navy-light:  #1a2232;
+  --navy-card:   #1f2940;
+  --gold:        #FFB81C;
+  --gold-light:  #ffc53d;
+  --gold-dim:    #cc9200;
   --white:       #FFFFFF;
-  --white-soft:  #f0f4f8;
-  --text-muted:  #8fa4bc;
-  --text-mid:    #bccfe0;
-  --border:      rgba(201, 168, 76, 0.15);
-  --border-soft: rgba(255, 255, 255, 0.07);
+  --white-soft:  #e8edf7;
+  --text-muted:  #8a9bbf;
+  --text-mid:    #c0cce0;
+  --border:      rgba(255, 255, 255, 0.07);
+  --border-soft: rgba(255, 255, 255, 0.04);
 
   /* Status colors */
-  --status-tentative:    #C9A84C;
+  --status-tentative:    #FFB81C;
   --status-confirmed:    #27c17c;
   --status-declined:     #e05555;
   --status-pending:      #6b7c93;
@@ -45,22 +45,23 @@
 html { font-size: 14px; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--navy);
-  color: var(--white);
+  color: var(--white-soft);
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
 }
 
 /* ── Typography ─────────────────────────────────────────────── */
-.display-font { font-family: 'DM Serif Display', serif; }
+.display-font { font-family: 'DM Sans', sans-serif; font-weight: 800; }
 
-h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; }
+h1, h2, h3 { font-family: 'DM Sans', sans-serif; font-weight: 700; letter-spacing: -0.3px; }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.15rem; }
+h1 { font-size: 2rem; font-weight: 800; }
+h2 { font-size: 1.5rem; font-weight: 700; }
+h3 { font-size: 1.15rem; font-weight: 700; }
 
 .mono { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
 
@@ -69,9 +70,9 @@ h3 { font-size: 1.15rem; }
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 1000;
-  background: rgba(10, 20, 32, 0.97);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: rgba(12, 18, 32, 0.97);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0 20px;
   height: 52px;
   display: flex;
@@ -98,7 +99,7 @@ h3 { font-size: 1.15rem; }
   font-size: 14px;
   font-weight: 700;
   color: var(--navy);
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
 }
 
 .status-bar-brand .brand-name {
@@ -129,9 +130,9 @@ h3 { font-size: 1.15rem; }
 }
 
 .status-pill.session-date {
-  background: rgba(201, 168, 76, 0.15);
+  background: rgba(255, 184, 28, 0.15);
   color: var(--gold);
-  border: 1px solid rgba(201, 168, 76, 0.3);
+  border: 1px solid rgba(255, 184, 28, 0.3);
 }
 
 .status-pill.client-name {
@@ -297,7 +298,7 @@ h3 { font-size: 1.15rem; }
 }
 
 .client-card-info .client-name {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
   font-size: 17px;
   color: var(--white);
   margin-bottom: 2px;
@@ -395,8 +396,8 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--gold);
-  background: rgba(201, 168, 76, 0.06);
-  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.1);
+  background: rgba(255, 184, 28, 0.06);
+  box-shadow: 0 0 0 3px rgba(255, 184, 28, 0.1);
 }
 
 input::placeholder { color: rgba(255, 255, 255, 0.3); }
@@ -595,7 +596,7 @@ select option {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--gold-light);
-  box-shadow: 0 4px 16px rgba(201, 168, 76, 0.3);
+  box-shadow: 0 4px 16px rgba(255, 184, 28, 0.3);
   transform: translateY(-1px);
 }
 
@@ -738,8 +739,8 @@ select option {
 }
 
 .route-stop-card:hover {
-  border-color: rgba(201, 168, 76, 0.3);
-  background: rgba(201, 168, 76, 0.04);
+  border-color: rgba(255, 184, 28, 0.3);
+  background: rgba(255, 184, 28, 0.04);
 }
 
 .route-stop-header {
@@ -765,7 +766,7 @@ select option {
 }
 
 .stop-address {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
   font-size: 14px;
   color: var(--white);
   line-height: 1.3;
@@ -811,8 +812,8 @@ select option {
 
 .route-warning-banner {
   margin: 0 12px 8px;
-  background: rgba(201, 168, 76, 0.12);
-  border: 1px solid rgba(201, 168, 76, 0.3);
+  background: rgba(255, 184, 28, 0.12);
+  border: 1px solid rgba(255, 184, 28, 0.3);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 12px;
@@ -856,7 +857,7 @@ select option {
   transition: var(--transition);
 }
 
-.property-card:hover { border-color: rgba(201, 168, 76, 0.25); }
+.property-card:hover { border-color: rgba(255, 184, 28, 0.25); }
 
 .property-card-header {
   display: flex;
@@ -886,7 +887,7 @@ select option {
 }
 
 .prop-address {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
   font-size: 16px;
   white-space: nowrap;
   overflow: hidden;
@@ -920,9 +921,9 @@ select option {
 .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 .badge-tentative {
-  background: rgba(201, 168, 76, 0.15);
+  background: rgba(255, 184, 28, 0.15);
   color: var(--status-tentative);
-  border: 1px solid rgba(201, 168, 76, 0.35);
+  border: 1px solid rgba(255, 184, 28, 0.35);
 }
 
 .badge-confirmed {
@@ -1077,7 +1078,7 @@ select option {
 .disclosure-upload:hover,
 .disclosure-upload.dragover {
   border-color: var(--gold);
-  background: rgba(201, 168, 76, 0.05);
+  background: rgba(255, 184, 28, 0.05);
 }
 
 .disclosure-upload .upload-icon { font-size: 24px; margin-bottom: 6px; }
@@ -1140,7 +1141,7 @@ select option {
 }
 
 .red-flag-severity.monitor {
-  background: rgba(201, 168, 76, 0.2);
+  background: rgba(255, 184, 28, 0.2);
   color: var(--status-tentative);
 }
 
@@ -1190,7 +1191,7 @@ select option {
 .delivery-stat .ds-num {
   font-size: 32px;
   font-weight: 700;
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
   color: var(--gold);
 }
 
@@ -1260,8 +1261,8 @@ select option {
 
 /* ── Plan display ───────────────────────────────────────────── */
 .plan-display {
-  background: rgba(201, 168, 76, 0.06);
-  border: 1px solid rgba(201, 168, 76, 0.25);
+  background: rgba(255, 184, 28, 0.06);
+  border: 1px solid rgba(255, 184, 28, 0.25);
   border-radius: var(--radius);
   padding: 16px 18px;
   margin-bottom: 16px;
@@ -1469,7 +1470,7 @@ select option {
 /* ── Google Places autocomplete dropdown ───────────────────────── */
 .pac-container {
   background: #1a2d42;
-  border: 1px solid rgba(201, 168, 76, 0.3);
+  border: 1px solid rgba(255, 184, 28, 0.3);
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   font-family: 'Inter', sans-serif;
@@ -1482,10 +1483,10 @@ select option {
   cursor: pointer;
 }
 .pac-item:hover, .pac-item-selected {
-  background: rgba(201, 168, 76, 0.15);
+  background: rgba(255, 184, 28, 0.15);
 }
-.pac-item-query { color: #c9a84c; }
-.pac-matched { color: #c9a84c; font-weight: 600; }
+.pac-item-query { color: #FFB81C; }
+.pac-matched { color: #FFB81C; font-weight: 600; }
 .pac-logo::after { display: none; }
 
 /* ── Settings screen ───────────────────────────────────────────── */
@@ -1977,7 +1978,7 @@ select option {
 }
 
 .client-stat-number {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'DM Sans', sans-serif; font-weight: 700;
   font-size: 36px;
   color: var(--gold);
   line-height: 1;
@@ -2579,7 +2580,7 @@ select option {
   position: absolute;
   left: 0;
   right: 0;
-  background: rgba(201, 168, 76, 0.18);
+  background: rgba(255, 184, 28, 0.18);
   border: 1.5px solid var(--gold);
   border-radius: 4px;
   z-index: 3;
