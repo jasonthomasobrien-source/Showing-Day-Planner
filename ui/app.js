@@ -350,6 +350,7 @@ function addClientGroup() {
     id,
     clientName: '',
     addresses: [''],
+    date: new Date().toISOString().split('T')[0],
     windowStart: '13:00',
     windowEnd: '18:00'
   });
@@ -432,6 +433,10 @@ function renderClientGroups() {
           <div>
             <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);display:block;margin-bottom:6px;">Availability Window</label>
             <div class="client-group-window">
+              <div class="form-field" style="flex:1.2;">
+                <label>Date</label>
+                <input type="date" id="cg-date-${group.id}" value="${group.date}" data-gid="${group.id}">
+              </div>
               <div class="form-field">
                 <label>Start Time</label>
                 <input type="time" id="cg-start-${group.id}" value="${group.windowStart}" data-gid="${group.id}">
@@ -469,6 +474,9 @@ function renderClientGroups() {
     }
 
     // Time window inputs
+    const dateInput = $(`cg-date-${group.id}`);
+    if (dateInput) dateInput.addEventListener('change', e => { group.date = e.target.value; });
+
     const startInput = $(`cg-start-${group.id}`);
     if (startInput) startInput.addEventListener('change', e => { group.windowStart = e.target.value; });
 
@@ -713,7 +721,12 @@ async function handleOptimizeMultiGroup() {
   try {
     for (const group of groups) {
       const addrs = group.addresses.filter(a => a.trim());
-      const sessionDatetime = `${sessionDate} ${group.windowStart || '13:00'}`;
+      const groupDate = group.date || sessionDate;
+      if (!groupDate) { showError(`Set a date for ${group.clientName || `Group ${group.id}`}`); return; }
+      if (new Date(`${groupDate}T${group.windowStart || '13:00'}`) < new Date()) {
+        showError(`Showing date for ${group.clientName || `Group ${group.id}`} is in the past`); return;
+      }
+      const sessionDatetime = `${groupDate} ${group.windowStart || '13:00'}`;
       const result = await apiFetch('/api/optimize-route', {
         method: 'POST',
         body: {
