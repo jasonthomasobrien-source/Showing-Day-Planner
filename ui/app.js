@@ -23,6 +23,8 @@ const AppState = {
   propertyResearch: {},  // address → listing data
   returnDestination: 'home',   // 'home' | 'office' | 'custom' | 'none'
   returnCustomAddress: '',
+  startAddress: '',
+  directionsRenderer: null,
 };
 
 // ── Utility ────────────────────────────────────────────────────────────────────
@@ -400,6 +402,7 @@ async function handleOptimizeRoute() {
 
     if (result.status === 'success') {
       AppState.route = result.data.route;
+      AppState.startAddress = startAddress;
       AppState.session = (await apiFetch('/api/session')).data;
       updateStatusBar();
 
@@ -449,8 +452,17 @@ function renderRoute(routeData) {
   const statsEl = $('route-total-duration');
   if (statsEl) statsEl.textContent = `${total_duration_minutes} min total`;
 
-  // Sidebar stops
-  sidebar.innerHTML = route.map(stop => {
+  // Sidebar stops — prepend Start card
+  const startCard = AppState.startAddress ? `
+    <div class="route-stop-card route-stop-start">
+      <div class="route-stop-header">
+        <div class="stop-number" style="background:#4a9eff;font-size:13px;font-weight:800;">S</div>
+        <div class="stop-address">${AppState.startAddress}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);padding:2px 0 0 36px;">Starting location</div>
+    </div>` : '';
+
+  sidebar.innerHTML = startCard + route.map(stop => {
     if (stop.is_return) {
       return `
         <div class="route-stop-card route-stop-return">
@@ -530,7 +542,7 @@ function initGoogleMaps(apiKey) {
 
   const script = document.createElement('script');
   // Load Places library alongside Maps; callback triggers autocomplete setup
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsAutocomplete`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,directions&callback=initGoogleMapsAutocomplete`;
   script.async = true;
   script.defer = true;
   document.head.appendChild(script);
@@ -612,67 +624,115 @@ function initRouteOnMap(route) {
   if (!AppState.map || !window.google) return;
   clearMapMarkers();
 
+  // Clear previous directions renderer
+  if (AppState.directionsRenderer) {
+    AppState.directionsRenderer.setMap(null);
+    AppState.directionsRenderer = null;
+  }
+
+  // Filter out the return stop for routing purposes; handle it separately
+  const showingStops = route.filter(s => !s.is_return);
+  if (showingStops.length === 0) return;
+
+  const origin = AppState.startAddress || showingStops[0].address;
+  const returnStop = route.find(s => s.is_return);
+  const destination = returnStop ? returnStop.address : showingStops[showingStops.length - 1].address;
+
+  // Build waypoints from all showing stops (origin→stop1→...→stopN→destination)
+  // If no return, destination is last stop so waypoints are everything in between
+  const waypointStops = returnStop ? showingStops : showingStops.slice(0, -1);
+  const waypoints = waypointStops.map(s => ({
+    location: s.address,
+    stopover: true
+  }));
+
+  const directionsService = new google.maps.DirectionsService();
+  const renderer = new google.maps.DirectionsRenderer({
+    map: AppState.map,
+    suppressMarkers: true,   // we draw our own numbered markers below
+    polylineOptions: {
+      strokeColor: '#C9A84C',
+      strokeOpacity: 0.8,
+      strokeWeight: 4
+    }
+  });
+  AppState.directionsRenderer = renderer;
+
+  directionsService.route({
+    origin,
+    destination,
+    waypoints,
+    travelMode: google.maps.TravelMode.DRIVING,
+    optimizeWaypoints: false   // order already optimized by backend
+  }, (result, status) => {
+    if (status === 'OK') {
+      renderer.setDirections(result);
+    } else {
+      console.warn('[map] Directions API failed:', status, '— falling back to geocode markers');
+    }
+
+    // Always place custom markers regardless of directions result
+    placeRouteMarkers(route, origin, returnStop);
+  });
+}
+
+function placeRouteMarkers(route, origin, returnStop) {
   const geocoder = new google.maps.Geocoder();
   const bounds = new google.maps.LatLngBounds();
-  const routeCoords = [];
 
-  // Geocode each address and place numbered markers
-  const geocodePromises = route.map((stop, idx) => {
-    return new Promise(resolve => {
-      geocoder.geocode({ address: stop.address }, (results, status) => {
-        if (status === 'OK') {
-          const pos = results[0].geometry.location;
-          bounds.extend(pos);
-          routeCoords[idx] = pos;
+  // Start marker (blue "S")
+  geocoder.geocode({ address: origin }, (results, status) => {
+    if (status !== 'OK') return;
+    const pos = results[0].geometry.location;
+    bounds.extend(pos);
+    const marker = new google.maps.Marker({
+      position: pos,
+      map: AppState.map,
+      label: { text: 'S', color: '#ffffff', fontWeight: 'bold', fontSize: '12px' },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 16,
+              fillColor: '#4a9eff', fillOpacity: 1, strokeColor: '#0D1B2A', strokeWeight: 2 },
+      title: `Start: ${origin}`
+    });
+    AppState.mapMarkers.push(marker);
+  });
 
-          // Custom numbered marker
-          const marker = new google.maps.Marker({
-            position: pos,
-            map: AppState.map,
-            label: {
-              text: String(stop.order),
-              color: '#0D1B2A',
-              fontWeight: 'bold',
-              fontSize: '12px'
-            },
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 16,
-              fillColor: '#C9A84C',
-              fillOpacity: 1,
-              strokeColor: '#0D1B2A',
-              strokeWeight: 2
-            },
-            title: `${stop.order}. ${stop.address}\n${stop.showing_start} – ${stop.showing_end}`
-          });
-
-          AppState.mapMarkers.push(marker);
-          resolve();
-        } else {
-          routeCoords[idx] = null;
-          resolve();
-        }
+  // Numbered stop markers (gold)
+  route.filter(s => !s.is_return).forEach(stop => {
+    geocoder.geocode({ address: stop.address }, (results, status) => {
+      if (status !== 'OK') return;
+      const pos = results[0].geometry.location;
+      bounds.extend(pos);
+      const marker = new google.maps.Marker({
+        position: pos,
+        map: AppState.map,
+        label: { text: String(stop.order), color: '#0D1B2A', fontWeight: 'bold', fontSize: '12px' },
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 16,
+                fillColor: '#C9A84C', fillOpacity: 1, strokeColor: '#0D1B2A', strokeWeight: 2 },
+        title: `${stop.order}. ${stop.address}\n${stop.showing_start} – ${stop.showing_end}`
       });
+      AppState.mapMarkers.push(marker);
+      AppState.map.fitBounds(bounds, { padding: 60 });
     });
   });
 
-  Promise.all(geocodePromises).then(() => {
-    // Draw polyline connecting stops in order
-    const validCoords = routeCoords.filter(Boolean);
-    if (validCoords.length > 1) {
-      AppState.mapPolyline = new google.maps.Polyline({
-        path: validCoords,
-        geodesic: true,
-        strokeColor: '#C9A84C',
-        strokeOpacity: 0.6,
-        strokeWeight: 2
+  // Return marker (house icon, gray)
+  if (returnStop) {
+    geocoder.geocode({ address: returnStop.address }, (results, status) => {
+      if (status !== 'OK') return;
+      const pos = results[0].geometry.location;
+      bounds.extend(pos);
+      const marker = new google.maps.Marker({
+        position: pos,
+        map: AppState.map,
+        label: { text: '🏠', color: '#ffffff', fontSize: '13px' },
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 16,
+                fillColor: '#6b7c93', fillOpacity: 1, strokeColor: '#0D1B2A', strokeWeight: 2 },
+        title: `Return: ${returnStop.address}`
       });
-      AppState.mapPolyline.setMap(AppState.map);
-    }
-    if (validCoords.length > 0) {
+      AppState.mapMarkers.push(marker);
       AppState.map.fitBounds(bounds, { padding: 60 });
-    }
-  });
+    });
+  }
 }
 
 // ── Calendar ───────────────────────────────────────────────────────────────────
