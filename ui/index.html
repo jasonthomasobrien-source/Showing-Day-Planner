@@ -53,6 +53,9 @@
       <button class="nav-tab" data-screen="delivery">
         <span>📤</span> Deliver
       </button>
+      <button class="nav-tab" data-screen="clients">
+        <span>👥</span> Clients
+      </button>
       <button class="nav-tab" data-screen="settings">
         <span>⚙️</span> Settings
       </button>
@@ -405,7 +408,49 @@
 
 
   <!-- ════════════════════════════════════════════════
-       SCREEN 5 — SETTINGS
+       SCREEN 5 — CLIENTS
+  ════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-clients">
+
+    <!-- Stats bar -->
+    <div class="clients-stats-bar">
+      <div class="client-stat">
+        <div class="client-stat-number" id="stat-total-clients">—</div>
+        <div class="client-stat-label">Total Clients</div>
+      </div>
+      <div class="client-stat">
+        <div class="client-stat-number" id="stat-total-showings">—</div>
+        <div class="client-stat-label">Total Sessions</div>
+      </div>
+      <div class="client-stat">
+        <div class="client-stat-number" id="stat-upcoming-showings">—</div>
+        <div class="client-stat-label">Upcoming</div>
+      </div>
+      <div class="client-stat">
+        <div class="client-stat-number" id="stat-this-month">—</div>
+        <div class="client-stat-label">This Month</div>
+      </div>
+    </div>
+
+    <!-- Search + Add -->
+    <div class="clients-toolbar">
+      <div class="clients-search-wrap">
+        <input type="text" id="client-search-input" placeholder="Search clients by name…" autocomplete="off">
+        <div id="client-search-dropdown" class="client-search-dropdown" style="display:none;"></div>
+      </div>
+      <button class="btn btn-primary" id="btn-add-client">+ Add Client</button>
+    </div>
+
+    <!-- Client list -->
+    <div id="clients-list" class="clients-list">
+      <!-- Rendered by JS -->
+    </div>
+
+  </div><!-- end screen-clients -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 6 — SETTINGS
   ════════════════════════════════════════════════ -->
   <div class="screen" id="screen-settings">
     <div class="screen-header">

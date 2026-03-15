@@ -144,6 +144,244 @@ def auth_logout():
     return jsonify({"status": "success"})
 
 
+# ── Clients endpoints ──────────────────────────────────────────────────────────
+
+CLIENTS_FILE = BASE_DIR / "clients.json"
+
+
+def _read_clients() -> dict:
+    """Read clients.json. Returns empty structure on any failure."""
+    try:
+        if CLIENTS_FILE.exists():
+            with open(CLIENTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {"clients": [], "last_updated": None}
+
+
+def _write_clients(data: dict) -> bool:
+    """Write clients.json. Returns False on read-only filesystem."""
+    try:
+        CLIENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(CLIENTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, default=str)
+        return True
+    except OSError:
+        return False
+
+
+def _compute_client_fields(client: dict) -> dict:
+    """Add computed summary fields to a client dict."""
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    sessions = client.get("sessions", [])
+    past = [s for s in sessions if s.get("date", "") < today]
+    future = [s for s in sessions if s.get("date", "") >= today]
+    last_date = max((s["date"] for s in past), default=None)
+    next_date = min((s["date"] for s in future), default=None)
+    client["total_sessions"] = len(sessions)
+    client["past_sessions"] = len(past)
+    client["future_sessions"] = len(future)
+    client["last_showing_date"] = last_date
+    client["next_showing_date"] = next_date
+    return client
+
+
+def _scan_archived_sessions(existing_ids: set) -> list:
+    """
+    Scan sessions/archive/ for completed sessions whose clients are not yet
+    in clients.json and return stub client entries for them.
+    """
+    stubs = []
+    archive_dir = BASE_DIR / "sessions" / "archive"
+    if not archive_dir.exists():
+        return stubs
+
+    for session_dir in archive_dir.iterdir():
+        if not session_dir.is_dir():
+            continue
+        state_file = session_dir / "session_state.json"
+        if not state_file.exists():
+            continue
+        try:
+            with open(state_file, "r", encoding="utf-8") as f:
+                sess = json.load(f)
+            client_data = sess.get("client")
+            if not client_data or not client_data.get("name"):
+                continue
+            cname = client_data["name"]
+            # Build a stable ID from the name
+            safe = cname.lower().replace(" ", "_")
+            cid = f"client_{safe}_archived"
+            if cid in existing_ids:
+                continue
+            existing_ids.add(cid)
+            props = sess.get("properties", [])
+            stub = {
+                "id": cid,
+                "name": cname,
+                "email": client_data.get("email", ""),
+                "phone": client_data.get("phone", ""),
+                "crm_source": client_data.get("crm_source", "manual"),
+                "added_date": sess.get("session_date", ""),
+                "sessions": [{
+                    "session_id": sess.get("session_id", session_dir.name),
+                    "date": sess.get("session_date", ""),
+                    "status": "completed",
+                    "properties_shown": len(props),
+                    "properties": [p["address"] for p in props if p.get("address")]
+                }]
+            }
+            stubs.append(stub)
+        except Exception:
+            continue
+    return stubs
+
+
+@app.route("/api/clients", methods=["GET"])
+def get_clients():
+    """
+    Return all clients with computed summary fields.
+    Merges clients.json with stubs from archived sessions.
+    Never crashes — returns empty list on any failure.
+    """
+    try:
+        data = _read_clients()
+        clients = data.get("clients", [])
+
+        existing_ids = {c["id"] for c in clients}
+        stubs = _scan_archived_sessions(existing_ids)
+        all_clients = clients + stubs
+
+        # Add computed fields
+        all_clients = [_compute_client_fields(c) for c in all_clients]
+
+        return jsonify({"status": "success", "data": {"clients": all_clients}})
+    except Exception:
+        return jsonify({"status": "success", "data": {"clients": []}})
+
+
+@app.route("/api/clients", methods=["POST"])
+def add_or_update_client():
+    """
+    Add or update a client in clients.json.
+    Body: {name, email, phone, crm_source}
+    """
+    try:
+        body = request.get_json() or {}
+        name = (body.get("name") or "").strip()
+        if not name:
+            return api_error("name is required", 400)
+
+        email = (body.get("email") or "").strip()
+        phone = (body.get("phone") or "").strip()
+        crm_source = (body.get("crm_source") or "manual").strip()
+
+        data = _read_clients()
+        clients = data.get("clients", [])
+
+        # Check for existing client by name (case-insensitive)
+        existing = next(
+            (c for c in clients if c.get("name", "").lower() == name.lower()),
+            None
+        )
+
+        if existing:
+            # Update fields but preserve sessions
+            existing["email"] = email or existing.get("email", "")
+            existing["phone"] = phone or existing.get("phone", "")
+            existing["crm_source"] = crm_source
+            new_client = existing
+        else:
+            ts = int(datetime.utcnow().timestamp())
+            safe = name.lower().replace(" ", "_")
+            new_client = {
+                "id": f"client_{safe}_{ts}",
+                "name": name,
+                "email": email,
+                "phone": phone,
+                "crm_source": crm_source,
+                "added_date": datetime.utcnow().strftime("%Y-%m-%d"),
+                "sessions": []
+            }
+            clients.append(new_client)
+
+        data["clients"] = clients
+        data["last_updated"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        persisted = _write_clients(data)
+        result = _compute_client_fields(dict(new_client))
+
+        resp = {"status": "success", "data": result}
+        if not persisted:
+            resp["note"] = "Persistence unavailable on this filesystem."
+        return jsonify(resp)
+
+    except Exception as e:
+        return api_error(f"Add client failed: {e}")
+
+
+@app.route("/api/clients/<client_id>/session", methods=["POST"])
+def link_session_to_client(client_id):
+    """
+    Link a completed session to a client record.
+    Body: {session_id, date, status, properties_shown, properties}
+    """
+    try:
+        body = request.get_json() or {}
+        data = _read_clients()
+        clients = data.get("clients", [])
+
+        client = next((c for c in clients if c.get("id") == client_id), None)
+        if not client:
+            return api_error(f"Client {client_id} not found", 404)
+
+        session_entry = {
+            "session_id": body.get("session_id", ""),
+            "date": body.get("date", ""),
+            "status": body.get("status", "completed"),
+            "properties_shown": body.get("properties_shown", 0),
+            "properties": body.get("properties", [])
+        }
+
+        sessions = client.get("sessions", [])
+        # Avoid duplicates by session_id
+        if session_entry["session_id"]:
+            sessions = [s for s in sessions if s.get("session_id") != session_entry["session_id"]]
+        sessions.append(session_entry)
+        client["sessions"] = sessions
+
+        data["last_updated"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        _write_clients(data)
+
+        return jsonify({"status": "success", "data": _compute_client_fields(dict(client))})
+
+    except Exception as e:
+        return api_error(f"Link session failed: {e}")
+
+
+@app.route("/api/clients/<client_id>", methods=["DELETE"])
+def delete_client(client_id):
+    """Remove a client from clients.json."""
+    try:
+        data = _read_clients()
+        clients = data.get("clients", [])
+        original_count = len(clients)
+        clients = [c for c in clients if c.get("id") != client_id]
+
+        if len(clients) == original_count:
+            return api_error(f"Client {client_id} not found", 404)
+
+        data["clients"] = clients
+        data["last_updated"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        _write_clients(data)
+
+        return jsonify({"status": "success", "data": {"deleted": client_id}})
+
+    except Exception as e:
+        return api_error(f"Delete client failed: {e}")
+
+
 @app.route("/output/<path:filename>")
 def serve_output(filename):
     """Serve generated client pages from the output directory."""

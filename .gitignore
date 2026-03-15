@@ -8,6 +8,9 @@
 session_state.json
 run_log.json
 
+# Client database — contains PII (names, emails, phones)
+clients.json
+
 # Generated output (keep directory structure, ignore contents)
 output/*
 !output/.gitkeep

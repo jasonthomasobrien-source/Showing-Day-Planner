@@ -1926,3 +1926,447 @@ select option {
   margin-left: 8px;
   vertical-align: middle;
 }
+
+/* ── Clients Screen ──────────────────────────────────────────── */
+
+.clients-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.client-stat {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+}
+
+.client-stat-number {
+  font-family: 'DM Serif Display', serif;
+  font-size: 36px;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.client-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Toolbar */
+.clients-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.clients-search-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.clients-search-wrap input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.clients-search-wrap input:focus {
+  border-color: rgba(201,168,76,0.5);
+}
+
+.client-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1a2d42;
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 8px;
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.client-search-result {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.client-search-result:hover {
+  background: rgba(201,168,76,0.1);
+}
+
+.client-search-result:last-child {
+  border-bottom: none;
+}
+
+.client-search-result-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Client list */
+.clients-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.client-card:hover {
+  border-color: rgba(201,168,76,0.3);
+}
+
+.client-card-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  cursor: pointer;
+}
+
+.client-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--navy);
+}
+
+.client-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.client-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.client-contact {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.client-stats-inline {
+  display: flex;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.client-stat-inline {
+  text-align: center;
+}
+
+.client-stat-inline .num {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.client-stat-inline .lbl {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.client-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Client history panel */
+.client-history-panel {
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  background: rgba(0,0,0,0.15);
+}
+
+.session-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 13px;
+}
+
+.session-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.session-dot.upcoming {
+  background: #4a9eff;
+}
+
+.session-dot.in-progress {
+  background: #4caf88;
+}
+
+.session-info {
+  flex: 1;
+}
+
+.session-date {
+  font-weight: 600;
+  color: var(--text-mid);
+}
+
+.session-props {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Empty state */
+.clients-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.clients-empty .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.clients-empty h3 {
+  font-size: 18px;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+}
+
+.clients-empty p {
+  font-size: 14px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* Client overflow menu */
+.client-menu-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 18px;
+  padding: 4px 8px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.client-menu-btn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--border);
+  color: var(--white);
+}
+
+.client-menu-popup {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #1a2d42;
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 8px;
+  z-index: 200;
+  overflow: hidden;
+  min-width: 150px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.client-menu-popup button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-mid);
+  font-size: 13px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.15s;
+}
+
+.client-menu-popup button:last-child {
+  border-bottom: none;
+}
+
+.client-menu-popup button:hover {
+  background: rgba(201,168,76,0.08);
+  color: var(--white);
+}
+
+.client-menu-popup button.danger:hover {
+  background: rgba(224,85,85,0.12);
+  color: #e05555;
+}
+
+.client-menu-wrap {
+  position: relative;
+}
+
+/* Add client modal */
+.add-client-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.add-client-modal-box {
+  background: var(--navy-mid);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.add-client-modal-box h3 {
+  margin-bottom: 20px;
+  color: var(--gold);
+}
+
+.add-client-modal-box .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.add-client-modal-box .form-field label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.add-client-modal-box .form-field input,
+.add-client-modal-box .form-field select {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  font-size: 13px;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.add-client-modal-box .form-field input:focus,
+.add-client-modal-box .form-field select:focus {
+  border-color: rgba(201,168,76,0.5);
+}
+
+.add-client-modal-box .form-field select option {
+  background: var(--navy-mid);
+  color: var(--white);
+}
+
+.add-client-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* Clients loading state */
+.clients-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.clients-loading .spinner {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* Session status badges in history */
+.session-status-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-left: 6px;
+}
+
+.session-status-badge.completed {
+  background: rgba(39,193,124,0.15);
+  color: #27c17c;
+}
+
+.session-status-badge.upcoming {
+  background: rgba(74,158,255,0.15);
+  color: #4a9eff;
+}
+
+.session-status-badge.in-progress {
+  background: rgba(201,168,76,0.15);
+  color: var(--gold);
+}
+
+@media (max-width: 640px) {
+  .clients-stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .client-stats-inline {
+    display: none;
+  }
+}

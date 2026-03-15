@@ -2122,6 +2122,516 @@ function updateIntegrationBadges(settings) {
   });
 }
 
+// ── Debounce utility ───────────────────────────────────────────────────────────
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Clients screen ─────────────────────────────────────────────────────────────
+
+/** Avatar colors — pick by simple name hash mod 5 */
+const AVATAR_COLORS = ['#C9A84C', '#4a9eff', '#4caf88', '#9b59b6', '#e67e22'];
+
+function _avatarColor(name) {
+  if (!name) return AVATAR_COLORS[0];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function _initials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Format a date string as a human-friendly relative label.
+ * "Today", "Tomorrow", "Yesterday", "Mar 15", or "Mar 15, 2025"
+ */
+function formatRelativeDate(dateStr) {
+  if (!dateStr) return '—';
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  if (dateStr === todayStr) return 'Today';
+
+  const target = new Date(dateStr + 'T12:00:00');
+  const diff = Math.round((target - today) / 86400000);
+
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+
+  const thisYear = today.getFullYear() === target.getFullYear();
+  return target.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(thisYear ? {} : { year: 'numeric' })
+  });
+}
+
+/**
+ * Load the Clients screen: fetch data, update stats, render list.
+ */
+async function loadClientsScreen() {
+  const listEl = $('clients-list');
+  if (!listEl) return;
+
+  // Show loading state
+  listEl.innerHTML = '<div class="clients-loading"><span class="spinner">⏳</span> Loading clients…</div>';
+
+  try {
+    const result = await apiFetch('/api/clients');
+    if (result.status === 'success') {
+      const clients = result.data.clients || [];
+      _updateClientsStats(clients);
+      renderClientsList(clients);
+      // Store for search filtering
+      window._allClients = clients;
+    } else {
+      listEl.innerHTML = '<div class="clients-empty"><div class="empty-icon">⚠️</div><h3>Could not load clients</h3><p>Try refreshing the page.</p></div>';
+    }
+  } catch (e) {
+    listEl.innerHTML = '<div class="clients-empty"><div class="empty-icon">⚠️</div><h3>Could not load clients</h3><p>' + (e.message || 'Network error') + '</p></div>';
+  }
+}
+
+function _updateClientsStats(clients) {
+  const today = new Date();
+  const thisMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  let totalSessions = 0;
+  let upcoming = 0;
+  let thisMonth = 0;
+
+  clients.forEach(c => {
+    const sessions = c.sessions || [];
+    totalSessions += sessions.length;
+    sessions.forEach(s => {
+      if (s.date && s.date >= todayStr) upcoming++;
+      if (s.date && s.date.startsWith(thisMonthStr)) thisMonth++;
+    });
+  });
+
+  const set = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+  set('stat-total-clients',   clients.length);
+  set('stat-total-showings',  totalSessions);
+  set('stat-upcoming-showings', upcoming);
+  set('stat-this-month',      thisMonth);
+}
+
+/**
+ * Render all client cards into #clients-list.
+ */
+function renderClientsList(clients) {
+  const listEl = $('clients-list');
+  if (!listEl) return;
+
+  if (!clients || clients.length === 0) {
+    listEl.innerHTML = `
+      <div class="clients-empty">
+        <div class="empty-icon">👥</div>
+        <h3>No clients yet</h3>
+        <p>Add your first client or run a showing session to get started.</p>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = '';
+  clients.forEach(client => {
+    const card = _buildClientCard(client);
+    listEl.appendChild(card);
+  });
+}
+
+function _buildClientCard(client) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'client-card';
+  wrapper.dataset.clientId = client.id;
+
+  const color = _avatarColor(client.name);
+  const initials = _initials(client.name);
+  const past = client.past_sessions || 0;
+  const future = client.future_sessions || 0;
+  const lastDate = client.last_showing_date ? formatRelativeDate(client.last_showing_date) : '—';
+  const nextDate = client.next_showing_date ? formatRelativeDate(client.next_showing_date) : '—';
+
+  const contactParts = [];
+  if (client.email) contactParts.push(client.email);
+  if (client.phone) contactParts.push(client.phone);
+  const contactStr = contactParts.join(' · ') || 'No contact info';
+
+  wrapper.innerHTML = `
+    <div class="client-card-row" data-expand="${client.id}">
+      <div class="client-avatar" style="background:${color};">${initials}</div>
+      <div class="client-info">
+        <div class="client-name">${_escHtml(client.name)}</div>
+        <div class="client-contact">${_escHtml(contactStr)}</div>
+      </div>
+      <div class="client-stats-inline">
+        <div class="client-stat-inline">
+          <div class="num">${past}</div>
+          <div class="lbl">Past</div>
+        </div>
+        <div class="client-stat-inline">
+          <div class="num">${future}</div>
+          <div class="lbl">Upcoming</div>
+        </div>
+        <div class="client-stat-inline">
+          <div class="num" style="font-size:12px;font-weight:500;">${lastDate}</div>
+          <div class="lbl">Last</div>
+        </div>
+      </div>
+      <div class="client-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-sm btn-primary" onclick="startSessionForClient(${JSON.stringify(client).replace(/"/g,'&quot;')})">▶ Start Session</button>
+        <div class="client-menu-wrap">
+          <button class="client-menu-btn" onclick="toggleClientMenu('${client.id}', event)">⋯</button>
+          <div class="client-menu-popup" id="menu-${client.id}" style="display:none;">
+            <button onclick="showClientHistory('${client.id}'); closeAllClientMenus();">View History</button>
+            <button onclick="handleEditClient('${client.id}'); closeAllClientMenus();">Edit</button>
+            <button class="danger" onclick="handleRemoveClient('${client.id}'); closeAllClientMenus();">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="client-history-panel" id="history-${client.id}" style="display:none;">
+      ${renderClientHistory(client)}
+    </div>
+  `;
+
+  // Expand/collapse on row click
+  const row = wrapper.querySelector('.client-card-row');
+  row.addEventListener('click', () => toggleClientHistory(client.id));
+
+  return wrapper;
+}
+
+function _escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/**
+ * Returns the HTML string for the inline history panel.
+ */
+function renderClientHistory(client) {
+  const sessions = (client.sessions || []).slice().sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return b.date.localeCompare(a.date);
+  });
+
+  if (sessions.length === 0) {
+    return '<p style="font-size:13px;color:var(--text-muted);">No sessions recorded yet.</p>';
+  }
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  const rows = sessions.map(s => {
+    let dotClass = 'session-dot';
+    let badgeClass = 'session-status-badge completed';
+    let badgeLabel = 'Completed';
+
+    if (s.status === 'in-progress' || s.status === 'in_progress') {
+      dotClass = 'session-dot in-progress';
+      badgeClass = 'session-status-badge in-progress';
+      badgeLabel = 'In Progress';
+    } else if (s.date && s.date >= todayStr && s.status !== 'completed') {
+      dotClass = 'session-dot upcoming';
+      badgeClass = 'session-status-badge upcoming';
+      badgeLabel = 'Upcoming';
+    }
+
+    const propList = (s.properties || []).join(', ') || 'No properties recorded';
+    const propCount = s.properties_shown || (s.properties || []).length || 0;
+
+    return `
+      <div class="session-row">
+        <div class="${dotClass}"></div>
+        <div class="session-info">
+          <div class="session-date">
+            ${_escHtml(formatRelativeDate(s.date))}
+            <span class="${badgeClass}">${badgeLabel}</span>
+          </div>
+          <div class="session-props">${propCount} propert${propCount === 1 ? 'y' : 'ies'} · ${_escHtml(propList)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="session-timeline">${rows}</div>`;
+}
+
+function toggleClientHistory(clientId) {
+  const panel = $(`history-${clientId}`);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function showClientHistory(clientId) {
+  const panel = $(`history-${clientId}`);
+  if (panel) panel.style.display = 'block';
+}
+
+function toggleClientMenu(clientId, event) {
+  event.stopPropagation();
+  const menu = $(`menu-${clientId}`);
+  if (!menu) return;
+  const isVisible = menu.style.display !== 'none';
+  closeAllClientMenus();
+  if (!isVisible) menu.style.display = 'block';
+}
+
+function closeAllClientMenus() {
+  document.querySelectorAll('.client-menu-popup').forEach(m => { m.style.display = 'none'; });
+}
+
+// Close menus on outside click
+document.addEventListener('click', () => closeAllClientMenus());
+
+/**
+ * Filter rendered client cards by name substring.
+ * Also queries the CRM lookup endpoint for "Import from CRM" suggestions.
+ */
+async function clientSearchFilter(query) {
+  const allClients = window._allClients || [];
+  const q = query.trim().toLowerCase();
+
+  // Filter rendered cards
+  document.querySelectorAll('.client-card').forEach(card => {
+    const nameEl = card.querySelector('.client-name');
+    const name = (nameEl?.textContent || '').toLowerCase();
+    card.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+
+  const dropdown = $('client-search-dropdown');
+  if (!dropdown) return;
+
+  if (!q || q.length < 2) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  // Check if there are CRM matches to suggest
+  try {
+    const result = await apiFetch('/api/client-lookup', {
+      method: 'POST',
+      body: { name: query }
+    });
+
+    if (result.status === 'success' && result.data && !result.data.not_found) {
+      const crm = result.data;
+      // Only show if not already in local list
+      const alreadyExists = allClients.some(c => c.name?.toLowerCase() === crm.name?.toLowerCase());
+      if (!alreadyExists) {
+        dropdown.style.display = 'block';
+        dropdown.innerHTML = `
+          <div class="client-search-result" onclick="handleAddClient(${JSON.stringify(crm).replace(/"/g,'&quot;')})">
+            <div>
+              <div style="font-weight:600;">${_escHtml(crm.name)}</div>
+              <div class="client-search-result-label">Import from ${(crm.crm_source||'CRM').toUpperCase()} · ${_escHtml(crm.email||'')} ${_escHtml(crm.phone||'')}</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+    }
+  } catch (e) {
+    // CRM unreachable — suppress dropdown
+  }
+
+  dropdown.style.display = 'none';
+}
+
+/**
+ * Open the Add Client modal.
+ * Optionally pre-fill with a client object (from CRM suggestion).
+ */
+function handleAddClient(prefill) {
+  // Remove any existing modal
+  const existing = document.getElementById('add-client-modal');
+  if (existing) existing.remove();
+
+  const defaults = prefill || {};
+
+  const overlay = document.createElement('div');
+  overlay.className = 'add-client-modal-overlay';
+  overlay.id = 'add-client-modal';
+
+  overlay.innerHTML = `
+    <div class="add-client-modal-box">
+      <h3>Add Client</h3>
+
+      <div class="form-field">
+        <label>Full Name *</label>
+        <input type="text" id="acm-name" placeholder="First and Last Name" value="${_escHtml(defaults.name||'')}">
+      </div>
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="acm-email" placeholder="client@email.com" value="${_escHtml(defaults.email||'')}">
+      </div>
+      <div class="form-field">
+        <label>Phone</label>
+        <input type="text" id="acm-phone" placeholder="(616) 555-0000" value="${_escHtml(defaults.phone||'')}">
+      </div>
+      <div class="form-field">
+        <label>CRM Source</label>
+        <select id="acm-crm-source">
+          <option value="manual" ${defaults.crm_source==='manual'||!defaults.crm_source?'selected':''}>Manual</option>
+          <option value="lofty" ${defaults.crm_source==='lofty'?'selected':''}>Lofty</option>
+          <option value="ghl" ${defaults.crm_source==='ghl'?'selected':''}>GHL / Lead Connector</option>
+        </select>
+      </div>
+
+      <div class="add-client-modal-actions">
+        <button class="btn btn-secondary" onclick="document.getElementById('add-client-modal').remove()">Cancel</button>
+        <button class="btn btn-primary" id="acm-save-btn" onclick="saveNewClient()">Save Client</button>
+      </div>
+    </div>
+  `;
+
+  // Close on backdrop click
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
+
+  // Focus the name field (or email if name is pre-filled)
+  setTimeout(() => {
+    const nameInput = document.getElementById('acm-name');
+    if (nameInput) {
+      if (defaults.name) {
+        document.getElementById('acm-email')?.focus();
+      } else {
+        nameInput.focus();
+      }
+    }
+  }, 50);
+}
+
+async function saveNewClient() {
+  const name  = (document.getElementById('acm-name')?.value || '').trim();
+  const email = (document.getElementById('acm-email')?.value || '').trim();
+  const phone = (document.getElementById('acm-phone')?.value || '').trim();
+  const crmSource = document.getElementById('acm-crm-source')?.value || 'manual';
+
+  if (!name) {
+    showToast('Name required', 'Please enter the client name.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('acm-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    const result = await apiFetch('/api/clients', {
+      method: 'POST',
+      body: { name, email, phone, crm_source: crmSource }
+    });
+
+    if (result.status === 'success') {
+      document.getElementById('add-client-modal')?.remove();
+      showToast('Client saved', `${name} added to your client list.`, 'success');
+      $('client-search-input').value = '';
+      await loadClientsScreen();
+    } else {
+      showToast('Save failed', result.error || 'Could not save client.', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Save Client'; }
+    }
+  } catch (e) {
+    showToast('Save failed', e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Client'; }
+  }
+}
+
+/**
+ * Pre-fill the Add Client modal with existing data for editing.
+ */
+async function handleEditClient(clientId) {
+  const allClients = window._allClients || [];
+  const client = allClients.find(c => c.id === clientId);
+  if (!client) {
+    showToast('Client not found', '', 'error');
+    return;
+  }
+  handleAddClient(client);
+}
+
+/**
+ * Remove a client after confirmation.
+ */
+async function handleRemoveClient(clientId) {
+  const allClients = window._allClients || [];
+  const client = allClients.find(c => c.id === clientId);
+  const name = client?.name || clientId;
+
+  // Use the existing confirm modal
+  const modal = $('confirm-modal');
+  const title = $('modal-title');
+  const msg = $('modal-message');
+  const confirmBtn = $('btn-confirm-modal');
+
+  if (modal && title && msg && confirmBtn) {
+    title.textContent = 'Remove Client';
+    msg.textContent = `Remove ${name} from your client list? This cannot be undone.`;
+    modal.classList.add('visible');
+
+    const newBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+
+    newBtn.addEventListener('click', async () => {
+      modal.classList.remove('visible');
+      try {
+        const result = await apiFetch(`/api/clients/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+        if (result.status === 'success') {
+          showToast('Client removed', `${name} has been removed.`, 'success');
+          await loadClientsScreen();
+        } else {
+          showToast('Remove failed', result.error || '', 'error');
+        }
+      } catch (e) {
+        showToast('Remove failed', e.message, 'error');
+      }
+    }, { once: true });
+  } else {
+    // Fallback: just delete
+    if (!confirm(`Remove ${name}?`)) return;
+    const result = await apiFetch(`/api/clients/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+    if (result.status === 'success') {
+      showToast('Client removed', '', 'success');
+      await loadClientsScreen();
+    }
+  }
+}
+
+/**
+ * Pre-fill AppState.client with the selected client and switch to Session Setup.
+ */
+function startSessionForClient(client) {
+  AppState.client = {
+    name: client.name,
+    email: client.email,
+    phone: client.phone,
+    crm_source: client.crm_source || 'manual'
+  };
+
+  // Show the client confirmation card on Session Setup screen
+  showClientCard(AppState.client);
+
+  // Persist to session
+  apiFetch('/api/session/update', { method: 'POST', body: { client: AppState.client } });
+
+  // Switch to session setup tab
+  showScreen('start');
+  showToast('Client loaded', `${client.name} pre-filled for the new session.`, 'success');
+}
+
 // ── Event binding ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize with one blank address row
@@ -2242,4 +2752,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (startTimeInput && !startTimeInput.value) startTimeInput.value = '13:00';
   const endTimeInput = $('end-time');
   if (endTimeInput && !endTimeInput.value) endTimeInput.value = '18:00';
+
+  // --- Clients screen ---
+  $('client-search-input')?.addEventListener('input', debounce(e => clientSearchFilter(e.target.value), 300));
+  $('btn-add-client')?.addEventListener('click', () => handleAddClient());
+
+  // Hide client search dropdown on outside click
+  document.addEventListener('click', e => {
+    const wrap = document.querySelector('.clients-search-wrap');
+    const dropdown = $('client-search-dropdown');
+    if (dropdown && wrap && !wrap.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Load clients screen when its tab is clicked
+  $$('.nav-tab').forEach(tab => {
+    if (tab.dataset.screen === 'clients') {
+      tab.addEventListener('click', loadClientsScreen);
+    }
+  });
 });
