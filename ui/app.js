@@ -2785,4 +2785,385 @@ document.addEventListener('DOMContentLoaded', () => {
       tab.addEventListener('click', loadClientsScreen);
     }
   });
+
+  // Calendar availability panel
+  initCalendarPanel();
+  // Handle OAuth redirect params
+  const calParams = new URLSearchParams(window.location.search);
+  if (calParams.get('cal_connected') === '1') {
+    showToast('Google Calendar connected!', 'success');
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => { checkCalAuthStatus(); }, 300);
+  }
+  if (calParams.get('cal_error')) {
+    showToast(`Calendar connect failed: ${calParams.get('cal_error')}`, 'error');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CALENDAR AVAILABILITY PANEL
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CAL_START = 6;    // 6am
+const CAL_END   = 22;   // 10pm
+const SLOT_H    = 56;   // px per hour — must match CSS .cal-time-label height
+
+let _calDrag            = null;   // active drag state
+let _calEvents          = [];
+let _calAuthenticated   = false;
+let _calAddressWatcher  = null;
+
+function initCalendarPanel() {
+  buildCalGrid();
+  attachCalDragHandlers();
+  checkCalAuthStatus();
+
+  // Watch session date → reload events + update header
+  $('session-date')?.addEventListener('change', e => updateCalDate(e.target.value));
+
+  // Seed selection from existing time inputs
+  $('start-time')?.addEventListener('change', updateSelectionFromInputs);
+  $('end-time')?.addEventListener('change',   updateSelectionFromInputs);
+
+  // Watch address inputs for ShowingTime stub updates (poll every 2s)
+  _calAddressWatcher = setInterval(updateCalShowingTime, 2000);
+
+  // Now-line
+  updateNowLine();
+  setInterval(updateNowLine, 60000);
+}
+
+// ── Grid builder ──────────────────────────────────────────────────────────────
+
+function buildCalGrid() {
+  const timeCol = document.getElementById('cal-time-col');
+  const grid    = document.getElementById('cal-grid');
+  if (!timeCol || !grid) return;
+
+  timeCol.innerHTML = '';
+  grid.innerHTML    = '';
+
+  const totalHours = CAL_END - CAL_START;
+  grid.style.height = `${totalHours * SLOT_H}px`;
+
+  for (let h = CAL_START; h <= CAL_END; h++) {
+    // Time label
+    const label = document.createElement('div');
+    label.className   = 'cal-time-label';
+    label.textContent = _calFmtHour(h);
+    timeCol.appendChild(label);
+
+    if (h < CAL_END) {
+      // Hour line
+      const line = document.createElement('div');
+      line.className = 'cal-hour-line';
+      line.style.top = `${(h - CAL_START) * SLOT_H}px`;
+      grid.appendChild(line);
+
+      // Half-hour line
+      const half = document.createElement('div');
+      half.className = 'cal-hour-line half';
+      half.style.top = `${(h - CAL_START) * SLOT_H + SLOT_H / 2}px`;
+      grid.appendChild(half);
+    }
+  }
+
+  // Selection overlay (hidden until drag)
+  const sel = document.createElement('div');
+  sel.id        = 'cal-selection';
+  sel.className = 'cal-selection';
+  sel.style.display = 'none';
+  const selLabel = document.createElement('div');
+  selLabel.id        = 'cal-selection-label';
+  selLabel.className = 'cal-selection-label';
+  sel.appendChild(selLabel);
+  grid.appendChild(sel);
+
+  // Current-time "now" line
+  const nowLine = document.createElement('div');
+  nowLine.id        = 'cal-now-line';
+  nowLine.className = 'cal-now-line';
+  nowLine.style.display = 'none';
+  nowLine.innerHTML = '<div class="cal-now-dot"></div>';
+  grid.appendChild(nowLine);
+}
+
+// ── Drag-to-select ────────────────────────────────────────────────────────────
+
+function attachCalDragHandlers() {
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+
+  grid.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const rect = grid.getBoundingClientRect();
+    const y    = e.clientY - rect.top + (grid.parentElement?.scrollTop || 0);
+    const t    = _yToTime(y);
+    _calDrag = { startY: y, t1: t, t2: t };
+    _renderSelection(t, t);
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!_calDrag) return;
+    const grid = document.getElementById('cal-grid');
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const y    = Math.min(Math.max(e.clientY - rect.top, 0), rect.height);
+    const t    = _yToTime(y);
+    const [t1, t2] = _calDrag.t1 <= t ? [_calDrag.t1, t] : [t, _calDrag.t1];
+    _renderSelection(t1, t2);
+    _calDrag.t2 = t;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!_calDrag) return;
+    const [t1, t2] = _calDrag.t1 <= _calDrag.t2
+      ? [_calDrag.t1, _calDrag.t2]
+      : [_calDrag.t2, _calDrag.t1];
+    _calDrag = null;
+
+    if (t1 === t2) return;  // no-op for zero-length drag
+
+    const startEl = $('start-time');
+    const endEl   = $('end-time');
+    if (startEl) { startEl.value = t1; startEl.dispatchEvent(new Event('change')); }
+    if (endEl)   { endEl.value   = t2; endEl.dispatchEvent(new Event('change')); }
+  });
+}
+
+function _renderSelection(t1, t2) {
+  const sel   = document.getElementById('cal-selection');
+  const label = document.getElementById('cal-selection-label');
+  if (!sel) return;
+  const y1 = _timeToY(t1);
+  const y2 = _timeToY(t2);
+  if (y1 === y2) { sel.style.display = 'none'; return; }
+  sel.style.display = 'block';
+  sel.style.top     = `${Math.min(y1, y2)}px`;
+  sel.style.height  = `${Math.abs(y2 - y1)}px`;
+  if (label) label.textContent = `${_fmt12(t1)} – ${_fmt12(t2)}`;
+}
+
+function updateSelectionFromInputs() {
+  const t1 = $('start-time')?.value;
+  const t2 = $('end-time')?.value;
+  if (t1 && t2) _renderSelection(t1, t2);
+}
+
+// ── Now line ──────────────────────────────────────────────────────────────────
+
+function updateNowLine() {
+  const nowLine = document.getElementById('cal-now-line');
+  if (!nowLine) return;
+  const now = new Date();
+  const h   = now.getHours() + now.getMinutes() / 60;
+  if (h < CAL_START || h > CAL_END) { nowLine.style.display = 'none'; return; }
+  nowLine.style.display = 'block';
+  nowLine.style.top     = `${(h - CAL_START) * SLOT_H}px`;
+}
+
+// ── Auth status + connect/disconnect ─────────────────────────────────────────
+
+async function checkCalAuthStatus() {
+  try {
+    const res = await apiFetch('/api/calendar/auth-status');
+    _calAuthenticated = res?.authenticated || false;
+  } catch (e) {
+    _calAuthenticated = false;
+  }
+  _updateCalConnectBtn();
+
+  const notConn = document.getElementById('cal-not-connected');
+  const gridWrap = document.getElementById('cal-grid-wrap');
+  const dragHint = document.getElementById('cal-drag-hint');
+
+  if (_calAuthenticated) {
+    if (notConn)  notConn.style.display  = 'none';
+    if (gridWrap) gridWrap.style.display = 'flex';
+    if (dragHint) dragHint.style.display = 'block';
+    const date = $('session-date')?.value;
+    if (date) { updateCalDate(date); loadGcalEvents(date); }
+    else updateCalDate(null);
+  } else {
+    if (notConn)  notConn.style.display  = 'flex';
+    if (gridWrap) gridWrap.style.display = 'none';
+    if (dragHint) dragHint.style.display = 'none';
+    updateCalDate($('session-date')?.value || null);
+  }
+}
+
+function _updateCalConnectBtn() {
+  const btn = document.getElementById('btn-gcal-connect');
+  if (!btn) return;
+  if (_calAuthenticated) {
+    btn.textContent = '✓ Google';
+    btn.classList.add('connected');
+    btn.onclick = _calDisconnect;
+  } else {
+    btn.textContent = '+ Connect Calendar';
+    btn.classList.remove('connected');
+    btn.onclick = () => { window.location.href = '/auth/google/calendar'; };
+  }
+}
+
+async function _calDisconnect() {
+  try { await apiFetch('/api/calendar/disconnect', { method: 'POST' }); } catch (e) {}
+  _calAuthenticated = false;
+  _calEvents = [];
+  _clearCalEvents();
+  checkCalAuthStatus();
+}
+
+// ── Date update + event loading ───────────────────────────────────────────────
+
+function updateCalDate(dateStr) {
+  const label = document.getElementById('cal-date-label');
+  const sub   = document.getElementById('cal-date-sub');
+
+  if (dateStr) {
+    const d = new Date(`${dateStr}T12:00:00`);
+    if (label) label.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    if (sub)   sub.textContent   = _calAuthenticated ? 'Drag to set your window' : 'Connect calendar to see availability';
+  } else {
+    if (label) label.textContent = 'Select a date';
+    if (sub)   sub.textContent   = 'to see your availability';
+  }
+
+  if (dateStr && _calAuthenticated) loadGcalEvents(dateStr);
+  updateCalShowingTime();
+
+  // Update grid's selection from time inputs when date changes
+  updateSelectionFromInputs();
+
+  // Scroll to 8am
+  const wrap = document.getElementById('cal-grid-wrap');
+  if (wrap) wrap.scrollTop = Math.max(0, (8 - CAL_START) * SLOT_H - 20);
+}
+
+async function loadGcalEvents(dateStr) {
+  const tzOffset = _getTzOffset();
+  try {
+    const res = await apiFetch(`/api/calendar/events?date=${dateStr}&tz_offset=${encodeURIComponent(tzOffset)}`);
+    if (res?.status === 'success') {
+      _calEvents = res.data.events || [];
+      _renderCalEvents();
+    }
+  } catch (e) {
+    // Silent — calendar events are supplemental
+  }
+}
+
+// ── Event rendering ───────────────────────────────────────────────────────────
+
+const GCAL_COLORS = {
+  '1': '#7986CB', '2': '#33B679', '3': '#8E24AA', '4': '#E67C73',
+  '5': '#F6BF26', '6': '#F4511E', '7': '#039BE5', '8': '#616161',
+  '9': '#3F51B5', '10': '#0B8043', '11': '#D50000', default: '#4285F4'
+};
+
+function _renderCalEvents() {
+  _clearCalEvents();
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+
+  const totalPx = (CAL_END - CAL_START) * SLOT_H;
+
+  for (const ev of _calEvents) {
+    if (ev.all_day) continue;
+    const t1 = _parseISOTime(ev.start);
+    const t2 = _parseISOTime(ev.end);
+    if (!t1 || !t2) continue;
+
+    const y1 = _timeToY(t1);
+    const y2 = _timeToY(t2);
+    if (y2 <= 0 || y1 >= totalPx) continue;
+
+    const color = GCAL_COLORS[ev.color] || GCAL_COLORS.default;
+    const el = document.createElement('div');
+    el.className = 'cal-event';
+    el.dataset.calEvent = '1';
+    el.style.top        = `${Math.max(y1, 0)}px`;
+    el.style.height     = `${Math.max(y2 - Math.max(y1, 0), 18)}px`;
+    el.style.background = `${color}2a`;
+    el.style.borderLeft = `3px solid ${color}`;
+    el.style.color      = color;
+    el.textContent      = ev.title;
+    grid.appendChild(el);
+  }
+}
+
+function _clearCalEvents() {
+  document.getElementById('cal-grid')?.querySelectorAll('[data-cal-event]').forEach(e => e.remove());
+}
+
+// ── ShowingTime stub ──────────────────────────────────────────────────────────
+
+function updateCalShowingTime() {
+  const container = document.getElementById('cal-st-list');
+  if (!container) return;
+
+  const addresses = Array.from(document.querySelectorAll('#address-list input[type="text"]'))
+    .map(i => i.value.trim()).filter(Boolean);
+
+  if (addresses.length === 0) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">Add property addresses to see showing windows</div>';
+    return;
+  }
+
+  container.innerHTML = addresses.map(addr => {
+    const short = addr.split(',')[0] || addr;
+    return `<div class="cal-st-row">
+      <span class="cal-st-addr" title="${addr}">${short}</span>
+      <span class="cal-st-stub">Pending API</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function _yToTime(y) {
+  const totalMins = Math.round(((y / ((CAL_END - CAL_START) * SLOT_H)) * (CAL_END - CAL_START) * 60) / 15) * 15;
+  const clamped   = Math.min(Math.max(totalMins, 0), (CAL_END - CAL_START) * 60);
+  const h = Math.floor(clamped / 60) + CAL_START;
+  const m = clamped % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+function _timeToY(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return ((h + m / 60) - CAL_START) * SLOT_H;
+}
+
+function _parseISOTime(isoStr) {
+  // "2026-03-17T14:30:00-05:00" → "14:30" in local time
+  if (!isoStr || isoStr.length < 16) return null;
+  try {
+    const d = new Date(isoStr);
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  } catch (e) { return null; }
+}
+
+function _getTzOffset() {
+  const offset = new Date().getTimezoneOffset();
+  const sign   = offset <= 0 ? '+' : '-';
+  const abs    = Math.abs(offset);
+  const h      = String(Math.floor(abs / 60)).padStart(2, '0');
+  const m      = String(abs % 60).padStart(2, '0');
+  return `${sign}${h}:${m}`;
+}
+
+function _calFmtHour(h) {
+  if (h === 0 || h === 24) return '12a';
+  if (h === 12) return '12p';
+  if (h < 12) return `${h}a`;
+  return `${h - 12}p`;
+}
+
+function _fmt12(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const suffix = h < 12 ? 'am' : 'pm';
+  const hh     = h % 12 || 12;
+  return m ? `${hh}:${String(m).padStart(2,'0')}${suffix}` : `${hh}${suffix}`;
+}

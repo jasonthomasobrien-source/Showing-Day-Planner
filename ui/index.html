@@ -89,6 +89,10 @@
       </div>
     </div>
 
+    <!-- ── Two-column setup layout (form left, calendar right) ── -->
+    <div class="setup-layout">
+    <div class="setup-form-col">
+
     <!-- ── Single-client section (Plan a Trip) ── -->
     <div id="single-client-section">
 
@@ -233,6 +237,52 @@
       </div>
 
     </div><!-- end multi-client-section -->
+
+    </div><!-- end setup-form-col -->
+
+    <!-- ── Calendar availability panel ── -->
+    <div class="cal-panel" id="cal-panel">
+      <div class="cal-panel-header">
+        <div>
+          <div class="cal-date-label" id="cal-date-label">Select a date</div>
+          <div class="cal-date-sub" id="cal-date-sub">to see your availability</div>
+        </div>
+        <button class="cal-connect-btn" id="btn-gcal-connect" title="Connect Google Calendar">
+          + Connect Calendar
+        </button>
+      </div>
+
+      <!-- Not-connected state -->
+      <div class="cal-not-connected" id="cal-not-connected">
+        <div class="cal-not-connected-icon">📅</div>
+        <div class="cal-not-connected-text">Connect Google Calendar to see your schedule</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="document.getElementById('btn-gcal-connect').click()">Connect</button>
+      </div>
+
+      <!-- Grid (shown when connected) -->
+      <div class="cal-grid-wrap" id="cal-grid-wrap" style="display:none;">
+        <div class="cal-time-col" id="cal-time-col"></div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <!-- Drag hint -->
+      <div class="cal-drag-hint" id="cal-drag-hint" style="display:none;">
+        Drag on the calendar to set your availability window
+      </div>
+
+      <!-- ShowingTime stub -->
+      <div class="cal-showingtime" id="cal-showingtime">
+        <div class="cal-showingtime-title">Showing Availability</div>
+        <div id="cal-st-list">
+          <div style="font-size:11px;color:var(--text-muted);padding:4px 0;">Add property addresses to see showing windows</div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:8px;font-style:italic;">
+          ShowingTime · SentriKey — Integration pending
+        </div>
+      </div>
+    </div><!-- end cal-panel -->
+
+    </div><!-- end setup-layout -->
 
     <!-- ── Plan display area ── -->
     <div id="plan-display" class="plan-display">

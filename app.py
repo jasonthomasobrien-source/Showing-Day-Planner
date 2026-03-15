@@ -19,7 +19,7 @@ from pathlib import Path
 from datetime import datetime
 from functools import wraps
 
-from flask import Flask, request, jsonify, send_from_directory, send_file, abort
+from flask import Flask, request, jsonify, send_from_directory, send_file, abort, redirect, session, url_for
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -31,6 +31,10 @@ load_dotenv(BASE_DIR / ".env")
 app = Flask(__name__, static_folder=str(BASE_DIR / "ui"), static_url_path="")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "showingday-dev-key-change-in-production")
 CORS(app)
+
+# Handle HTTPS when behind Vercel/nginx proxy
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # ── Tool imports ────────────────────────────────────────────────────────────────
 import sys
@@ -909,6 +913,163 @@ def update_property_status_route():
 
     except Exception as e:
         return api_error(f"Status update failed: {e}")
+
+
+# ── Google Calendar OAuth & Events ─────────────────────────────────────────────
+
+GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+
+
+def _build_gcal_flow(redirect_uri):
+    """Build Google OAuth2 flow from credentials JSON env var."""
+    creds_json = os.getenv('GOOGLE_CALENDAR_CREDENTIALS_JSON', '')
+    if not creds_json:
+        return None
+    try:
+        from google_auth_oauthlib.flow import Flow
+        creds_dict = json.loads(creds_json)
+        return Flow.from_client_config(creds_dict, scopes=GCAL_SCOPES, redirect_uri=redirect_uri)
+    except Exception:
+        return None
+
+
+def _gcal_redirect_uri():
+    """Build OAuth callback URI — handles HTTPS proxy on Vercel."""
+    proto = request.headers.get('X-Forwarded-Proto', request.scheme)
+    return f"{proto}://{request.host}/auth/google/calendar/callback"
+
+
+@app.route('/auth/google/calendar')
+def google_calendar_auth():
+    """Step 1 of Google Calendar OAuth — redirect to Google consent screen."""
+    if request.scheme == 'http' and not request.headers.get('X-Forwarded-Proto'):
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    else:
+        os.environ.pop('OAUTHLIB_INSECURE_TRANSPORT', None)
+
+    flow = _build_gcal_flow(_gcal_redirect_uri())
+    if not flow:
+        return redirect('/app?cal_error=no_credentials')
+
+    auth_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'
+    )
+    session['gcal_oauth_state'] = state
+    return redirect(auth_url)
+
+
+@app.route('/auth/google/calendar/callback')
+def google_calendar_callback():
+    """Step 2 of Google Calendar OAuth — exchange code for token."""
+    if request.scheme == 'http' and not request.headers.get('X-Forwarded-Proto'):
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+    flow = _build_gcal_flow(_gcal_redirect_uri())
+    if not flow:
+        return redirect('/app?cal_error=no_credentials')
+
+    try:
+        # When behind HTTPS proxy, request.url arrives as http — fix it
+        auth_response = request.url
+        if request.headers.get('X-Forwarded-Proto') == 'https':
+            auth_response = auth_response.replace('http://', 'https://', 1)
+
+        flow.fetch_token(authorization_response=auth_response)
+        creds = flow.credentials
+        session['calendar_token'] = {
+            'token': creds.token,
+            'refresh_token': creds.refresh_token,
+            'token_uri': creds.token_uri,
+            'client_id': creds.client_id,
+            'client_secret': creds.client_secret,
+            'scopes': list(creds.scopes) if creds.scopes else GCAL_SCOPES
+        }
+        return redirect('/app?cal_connected=1')
+    except Exception as e:
+        app.logger.error(f"Google Calendar OAuth error: {e}")
+        return redirect('/app?cal_error=oauth_failed')
+
+
+@app.route('/api/calendar/auth-status')
+def calendar_auth_status():
+    """Check if Google Calendar is connected for this session."""
+    return jsonify({'authenticated': bool(session.get('calendar_token'))})
+
+
+@app.route('/api/calendar/disconnect', methods=['POST'])
+def calendar_disconnect():
+    """Remove Google Calendar token from session."""
+    session.pop('calendar_token', None)
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/calendar/events')
+def calendar_events_for_date():
+    """
+    Fetch Google Calendar events for a given date.
+    Query params:
+      date      — YYYY-MM-DD
+      tz_offset — e.g. "-05:00" (browser's local timezone offset)
+    """
+    date_str = request.args.get('date', '')
+    tz_offset = request.args.get('tz_offset', '-05:00')
+
+    if not date_str:
+        return jsonify({'status': 'failure', 'error': 'date required', 'data': {'events': []}})
+
+    token_dict = session.get('calendar_token')
+    if not token_dict:
+        return jsonify({'status': 'failure', 'error': 'not_authenticated', 'data': {'events': []}})
+
+    try:
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+        from google.auth.transport.requests import Request as GoogleAuthRequest
+
+        creds = Credentials(
+            token=token_dict['token'],
+            refresh_token=token_dict.get('refresh_token'),
+            token_uri=token_dict.get('token_uri', 'https://oauth2.googleapis.com/token'),
+            client_id=token_dict['client_id'],
+            client_secret=token_dict['client_secret'],
+            scopes=token_dict.get('scopes', GCAL_SCOPES)
+        )
+
+        if creds.expired and creds.refresh_token:
+            creds.refresh(GoogleAuthRequest())
+            session['calendar_token'] = {**token_dict, 'token': creds.token}
+
+        service = build('calendar', 'v3', credentials=creds)
+
+        events_result = service.events().list(
+            calendarId='primary',
+            timeMin=f"{date_str}T00:00:00{tz_offset}",
+            timeMax=f"{date_str}T23:59:59{tz_offset}",
+            singleEvents=True,
+            orderBy='startTime',
+            maxResults=50
+        ).execute()
+
+        events = []
+        for ev in events_result.get('items', []):
+            start = ev['start'].get('dateTime', ev['start'].get('date', ''))
+            end   = ev['end'].get('dateTime', ev['end'].get('date', ''))
+            events.append({
+                'id':      ev['id'],
+                'title':   ev.get('summary', 'Busy'),
+                'start':   start,
+                'end':     end,
+                'all_day': 'date' in ev['start'],
+                'color':   ev.get('colorId')
+            })
+
+        return jsonify({'status': 'success', 'data': {'events': events}})
+
+    except Exception as e:
+        app.logger.error(f"Calendar events fetch error: {e}")
+        return jsonify({'status': 'failure', 'error': str(e), 'data': {'events': []}})
 
 
 # ── Error handlers ─────────────────────────────────────────────────────────────
