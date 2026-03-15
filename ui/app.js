@@ -772,6 +772,7 @@ async function handleAddToCalendar() {
   const session = AppState.session || {};
   const route = AppState.route || session.route || [];
   const showingStops = route.filter(s => !s.is_return);
+  const returnStop = route.find(s => s.is_return);
 
   if (showingStops.length === 0) {
     showToast('No route', 'Optimize a route first.', 'warning');
@@ -779,12 +780,32 @@ async function handleAddToCalendar() {
   }
 
   const clientName = session.client?.name || AppState.client?.name || 'Client';
+  const firstStop = showingStops[0];
+  const lastStop  = showingStops[showingStops.length - 1];
 
-  // Build a Google Calendar URL for each showing stop
-  const calUrls = showingStops.map(stop => ({
+  // Full trip block: departs at first showing arrival, ends at return arrival (or last showing end)
+  const tripStart = firstStop.arrival_time;
+  const tripEnd   = returnStop ? returnStop.arrival_time : lastStop.showing_end;
+  const allAddresses = showingStops.map(s => s.address.split(',')[0]).join(' → ');
+  const tripDescription =
+    `Showing day for ${clientName}\n` +
+    `Route: ${AppState.startAddress || 'Home'} → ${allAddresses}` +
+    (returnStop ? ` → ${returnStop.address.split(',')[0]}` : '') + '\n\n' +
+    showingStops.map(s => `• ${s.address.split(',')[0]}: ${s.showing_start} – ${s.showing_end}`).join('\n');
+
+  const fullTripUrl = buildGoogleCalendarUrl(
+    `🏠 Showing Day — ${clientName} (${showingStops.length} properties)`,
+    tripStart, tripEnd,
+    firstStop.address,
+    tripDescription
+  );
+
+  // Individual showing events
+  const individualUrls = showingStops.map(stop => ({
     address: stop.address,
+    time: `${stop.showing_start} – ${stop.showing_end}`,
     url: buildGoogleCalendarUrl(
-      `🏠 TENTATIVE — Showing: ${stop.address.split(',')[0]}`,
+      `🏠 Showing: ${stop.address.split(',')[0]}`,
       stop.showing_start,
       stop.showing_end,
       stop.address,
@@ -792,15 +813,12 @@ async function handleAddToCalendar() {
     )
   }));
 
-  // Show modal with clickable links instead of silently opening popups
-  showCalendarLinksModal(calUrls, clientName);
-
+  showCalendarLinksModal({ fullTripUrl, individualUrls, clientName, tripStart, tripEnd, showingStops });
   showScreen('status');
   renderPropertyStatusCards();
 }
 
-function showCalendarLinksModal(calUrls, clientName) {
-  // Remove any existing modal
+function showCalendarLinksModal({ fullTripUrl, individualUrls, clientName, tripStart, tripEnd, showingStops }) {
   const existing = $('cal-links-modal');
   if (existing) existing.remove();
 
@@ -809,22 +827,48 @@ function showCalendarLinksModal(calUrls, clientName) {
   modal.className = 'modal-overlay';
   modal.style.display = 'flex';
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:520px;width:100%;">
+    <div class="modal-box" style="max-width:560px;width:100%;">
       <h3 style="margin-bottom:4px;">Add to Google Calendar</h3>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
-        Click each showing to open Google Calendar and add it. Events are pre-filled as tentative.
+        Choose how to block your calendar. Each link opens Google Calendar pre-filled and ready to save.
       </p>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
-        ${calUrls.map((item, i) => `
-          <a href="${item.url}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-align:left;padding:12px 16px;text-decoration:none;display:flex;gap:10px;align-items:center;">
-            <span style="background:var(--gold);color:var(--navy);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${i+1}</span>
-            <span style="font-size:13px;">${item.address}</span>
-            <span style="margin-left:auto;font-size:11px;color:var(--gold);">Open →</span>
-          </a>
-        `).join('')}
+
+      <!-- Full trip block -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Full Trip Block</div>
+        <a href="${fullTripUrl}" target="_blank" rel="noopener"
+           style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:10px;text-decoration:none;color:inherit;transition:background 0.2s;"
+           onmouseover="this.style.background='rgba(201,168,76,0.15)'" onmouseout="this.style.background='rgba(201,168,76,0.08)'">
+          <span style="font-size:22px;">📅</span>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;color:var(--white);">Showing Day — ${clientName}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${tripStart} – ${tripEnd} · ${showingStops.length} properties · Single calendar block</div>
+          </div>
+          <span style="font-size:12px;color:var(--gold);font-weight:600;">Add →</span>
+        </a>
       </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" onclick="$('cal-links-modal').remove()">Done</button>
+
+      <!-- Individual showings -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Individual Showings</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${individualUrls.map((item, i) => `
+            <a href="${item.url}" target="_blank" rel="noopener"
+               style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:inherit;transition:background 0.2s;"
+               onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+              <span style="background:var(--gold);color:var(--navy);width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">${i+1}</span>
+              <div style="flex:1;">
+                <div style="font-size:13px;color:var(--white);">${item.address.split(',')[0]}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${item.time}</div>
+              </div>
+              <span style="font-size:11px;color:var(--gold);">Add →</span>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:24px;">
+        <button class="btn btn-primary" onclick="document.getElementById('cal-links-modal').remove()">Done</button>
       </div>
     </div>
   `;
