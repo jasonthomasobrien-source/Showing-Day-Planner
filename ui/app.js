@@ -546,6 +546,9 @@ function attachAutocomplete(input) {
       input.value = place.formatted_address;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    // Dismiss the dropdown
+    input.blur();
+    setTimeout(() => input.focus(), 0);
   });
 }
 
