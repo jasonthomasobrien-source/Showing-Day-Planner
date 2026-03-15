@@ -168,11 +168,7 @@
         </div>
       </div>
       <div class="form-grid" style="margin-top:14px;">
-        <div class="form-field">
-          <label>Starting Location</label>
-          <input type="text" id="start-address" placeholder="Plainwell, MI 49080">
-        </div>
-        <div class="form-field">
+        <div class="form-field" style="max-width:200px;">
           <label>Max Showing Time (minutes)</label>
           <input type="number" id="max-showing-minutes" value="30" min="15" max="120" step="5">
         </div>
@@ -189,6 +185,19 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Starting Location ── -->
+    <div class="form-section">
+      <div class="section-label">Starting Location</div>
+      <div class="start-location-toggle">
+        <button class="active" data-start="home">🏠 Home</button>
+        <button data-start="office">🏢 Office</button>
+        <button data-start="custom">📍 Custom</button>
+      </div>
+      <div id="start-custom-wrap" style="display:none;margin-top:10px;">
+        <input type="text" id="start-address" placeholder="Custom starting address…">
       </div>
     </div>
 

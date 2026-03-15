@@ -218,7 +218,7 @@ h3 { font-size: 1.15rem; }
 
 /* ── Session Start Screen ───────────────────────────────────── */
 #screen-start {
-  max-width: 780px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 48px 24px;
 }
@@ -460,6 +460,38 @@ select option {
 }
 
 .return-destination-toggle button.active {
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+}
+
+/* ── Starting location toggle (same pattern as return-destination) ── */
+.start-location-toggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.start-location-toggle button {
+  flex: 1;
+  background: none;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 10px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.start-location-toggle button:last-child {
+  border-right: none;
+}
+
+.start-location-toggle button.active {
   background: var(--gold);
   color: var(--navy);
   font-weight: 700;

@@ -21,6 +21,7 @@ const AppState = {
   pollInterval: null,
   pendingAction: null,
   propertyResearch: {},  // address → listing data
+  startDestination: 'home',    // 'home' | 'office' | 'custom'
   returnDestination: 'home',   // 'home' | 'office' | 'custom' | 'none'
   returnCustomAddress: '',
   startAddress: '',
@@ -559,6 +560,34 @@ async function handleGroupClientLookup(groupId) {
   }
 }
 
+// ── Starting location ──────────────────────────────────────────────────────────
+function resolveStartAddress() {
+  switch (AppState.startDestination) {
+    case 'home':
+      return AppState.config.default_start_address || 'Plainwell, MI';
+    case 'office':
+      return AppState.config.office_address || AppState.config.default_start_address || 'Plainwell, MI';
+    case 'custom':
+      return $('start-address')?.value || AppState.config.default_start_address || 'Plainwell, MI';
+    default:
+      return AppState.config.default_start_address || 'Plainwell, MI';
+  }
+}
+
+function initStartLocationToggle() {
+  $$('.start-location-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.start-location-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      AppState.startDestination = btn.dataset.start;
+      const wrap = $('start-custom-wrap');
+      if (wrap) wrap.style.display = AppState.startDestination === 'custom' ? 'block' : 'none';
+    });
+  });
+  const customInput = $('start-address');
+  if (customInput) attachAutocompleteWhenReady(customInput);
+}
+
 // ── Return destination ─────────────────────────────────────────────────────────
 function resolveReturnAddress(startAddress) {
   switch (AppState.returnDestination) {
@@ -608,7 +637,7 @@ async function handleOptimizeRoute() {
   const sessionDate = $('session-date')?.value;
   const startTime = $('start-time')?.value || '13:00';
   const endTime = $('end-time')?.value || '18:00';
-  const startAddress = $('start-address')?.value || AppState.config.default_start_address || 'Plainwell, MI';
+  const startAddress = resolveStartAddress();
   const maxMinutes = parseInt($('max-showing-minutes')?.value || '30');
   const direction = $$('.direction-toggle .active')[0]?.dataset.direction || 'start-loaded';
   const returnAddress = resolveReturnAddress(startAddress);
@@ -686,7 +715,7 @@ async function handleOptimizeRoute() {
 async function handleOptimizeMultiGroup() {
   const groups = AppState.clientGroups;
   const sessionDate = $('session-date')?.value;
-  const startAddress = $('start-address')?.value || AppState.config.default_start_address || 'Plainwell, MI';
+  const startAddress = resolveStartAddress();
   const maxMinutes = parseInt($('max-showing-minutes')?.value || '30');
   const direction = $$('.direction-toggle .active')[0]?.dataset.direction || 'start-loaded';
 
@@ -2650,6 +2679,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize with one blank address row
   AppState.addresses = [''];
   renderAddressList();
+  initStartLocationToggle();
   initReturnDestinationToggle();
   initModeSelector();
   loadSettings();
@@ -2665,10 +2695,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load config and session
   Promise.all([loadConfig(), loadSession()]);
-
-  // Attach autocomplete to start-address field once Maps loads
-  const startAddrInput = $('start-address');
-  if (startAddrInput) attachAutocompleteWhenReady(startAddrInput);
 
   // Start polling every 10 seconds
   AppState.pollInterval = setInterval(pollSession, 10000);
