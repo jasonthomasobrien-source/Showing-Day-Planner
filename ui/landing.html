@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShowingDay — Your entire showing day, planned in minutes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0D1B2A;
+      --navy-mid:   #1a2d42;
+      --navy-light: #243b55;
+      --navy-card:  #132236;
+      --gold:       #C9A84C;
+      --gold-light: #e0c068;
+      --gold-dim:   #8a6f2e;
+      --gold-bg:    #b8913e;
+      --white:      #FFFFFF;
+      --white-soft: #f0f4f8;
+      --text-muted: #8fa4bc;
+      --text-mid:   #bccfe0;
+      --border:     rgba(201, 168, 76, 0.15);
+      --border-soft: rgba(255, 255, 255, 0.07);
+      --radius:     10px;
+      --radius-lg:  16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    /* ── Typography ── */
+    .serif { font-family: 'DM Serif Display', serif; font-weight: 400; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(13, 27, 42, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--white);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .nav-logo .house-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--gold);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-nav-login {
+      background: none;
+      border: 1.5px solid var(--gold);
+      color: var(--gold);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 18px;
+      border-radius: 7px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-nav-login:hover {
+      background: rgba(201, 168, 76, 0.1);
+      color: var(--gold-light);
+    }
+
+    .btn-nav-demo {
+      background: var(--gold);
+      border: none;
+      color: var(--navy);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 7px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-nav-demo:hover {
+      background: var(--gold-light);
+      box-shadow: 0 4px 16px rgba(201, 168, 76, 0.35);
+      transform: translateY(-1px);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 32px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle radial glow behind hero */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 700px;
+      background: radial-gradient(ellipse, rgba(201, 168, 76, 0.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      max-width: 1140px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 2px;
+      background: var(--gold);
+      border-radius: 2px;
+    }
+
+    .hero-headline {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      line-height: 1.15;
+      color: var(--white);
+      margin-bottom: 22px;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-subheadline {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      max-width: 480px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-hero-primary {
+      background: var(--gold);
+      color: var(--navy);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 28px;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      letter-spacing: -0.1px;
+    }
+
+    .btn-hero-primary:hover {
+      background: var(--gold-light);
+      box-shadow: 0 6px 24px rgba(201, 168, 76, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-hero-ghost {
+      background: none;
+      color: var(--text-mid);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 14px 24px;
+      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-hero-ghost:hover {
+      border-color: rgba(255,255,255,0.25);
+      color: var(--white);
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* ── Hero mockup visual ── */
+    .hero-visual {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Browser / phone chrome frame */
+    .mockup-frame {
+      width: 100%;
+      max-width: 460px;
+      background: var(--navy-card);
+      border: 1px solid rgba(201, 168, 76, 0.2);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04),
+        0 32px 80px rgba(0,0,0,0.5),
+        0 0 60px rgba(201, 168, 76, 0.06);
+    }
+
+    /* Fake browser chrome */
+    .mockup-chrome {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chrome-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .chrome-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .chrome-dot:nth-child(1) { background: rgba(255,80,80,0.6); }
+    .chrome-dot:nth-child(2) { background: rgba(255,200,50,0.6); }
+    .chrome-dot:nth-child(3) { background: rgba(80,220,80,0.6); }
+
+    .chrome-url {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.2px;
+    }
+
+    /* Map area */
+    .mockup-map {
+      background: #0f2035;
+      position: relative;
+      height: 200px;
+      overflow: hidden;
+    }
+
+    /* Grid lines mimicking map tiles */
+    .mockup-map::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Road-like lines */
+    .map-road {
+      position: absolute;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+    }
+
+    .map-road.h1 { top: 60px; left: 0; right: 0; height: 5px; }
+    .map-road.h2 { top: 130px; left: 0; right: 0; height: 3px; }
+    .map-road.v1 { left: 80px; top: 0; bottom: 0; width: 4px; }
+    .map-road.v2 { left: 200px; top: 0; bottom: 0; width: 3px; }
+    .map-road.v3 { left: 340px; top: 0; bottom: 0; width: 4px; }
+    .map-road.diag {
+      top: 20px;
+      left: 80px;
+      width: 170px;
+      height: 3px;
+      transform: rotate(20deg);
+      transform-origin: left center;
+    }
+
+    /* Route connector line */
+    .route-connector {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+    }
+
+    .route-connector svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Map markers */
+    .map-marker {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--navy);
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 2px 12px rgba(201, 168, 76, 0.5), 0 0 0 3px rgba(201, 168, 76, 0.15);
+      z-index: 2;
+    }
+
+    .map-marker::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--gold);
+    }
+
+    .map-marker.start {
+      background: rgba(39, 193, 124, 0.9);
+      box-shadow: 0 2px 12px rgba(39, 193, 124, 0.5), 0 0 0 3px rgba(39, 193, 124, 0.15);
+    }
+
+    .map-marker.start::after {
+      border-top-color: rgba(39, 193, 124, 0.9);
+    }
+
+    .map-marker.m1 { top: 20px; left: 50px; }
+    .map-marker.m2 { top: 30px; left: 160px; }
+    .map-marker.m3 { top: 80px; left: 280px; }
+    .map-marker.m4 { top: 110px; left: 380px; }
+
+    /* Sidebar rows */
+    .mockup-sidebar {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mockup-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .mockup-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 15px;
+      color: var(--white);
+    }
+
+    .mockup-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .mockup-stop {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mockup-stop-num {
+      width: 22px;
+      height: 22px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--navy);
+      flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .mockup-stop-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mockup-stop-addr {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--white-soft);
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mockup-stop-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      margin-top: 1px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mockup-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+
+    .badge-confirmed {
+      background: rgba(39, 193, 124, 0.15);
+      color: #27c17c;
+      border: 1px solid rgba(39, 193, 124, 0.3);
+    }
+
+    .badge-tentative {
+      background: rgba(201, 168, 76, 0.15);
+      color: var(--gold);
+      border: 1px solid rgba(201, 168, 76, 0.3);
+    }
+
+    .badge-pending {
+      background: rgba(107, 124, 147, 0.15);
+      color: #6b7c93;
+      border: 1px solid rgba(107, 124, 147, 0.3);
+    }
+
+    /* ── FEATURES SECTION ── */
+    .section-features {
+      padding: 100px 32px;
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .section-headline {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      text-align: center;
+      color: var(--white);
+      margin-bottom: 12px;
+    }
+
+    .section-subhead {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 540px;
+      margin: 0 auto 60px;
+      line-height: 1.7;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.4), transparent);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(201, 168, 76, 0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .feature-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .section-how {
+      padding: 100px 32px;
+      background: linear-gradient(180deg, var(--navy) 0%, rgba(26, 45, 66, 0.4) 50%, var(--navy) 100%);
+      position: relative;
+    }
+
+    .section-how::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(201, 168, 76, 0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .how-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      position: relative;
+      margin-top: 60px;
+    }
+
+    /* Connector line between steps */
+    .how-steps::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: calc(16.67% + 28px);
+      right: calc(16.67% + 28px);
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold), rgba(201, 168, 76, 0.3), var(--gold));
+      opacity: 0.4;
+    }
+
+    .how-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 32px;
+      position: relative;
+    }
+
+    .how-step-number {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--navy-card);
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--gold);
+      margin-bottom: 20px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 0 0 6px var(--navy);
+    }
+
+    .how-step-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 17px;
+      color: var(--white);
+      margin-bottom: 10px;
+    }
+
+    .how-step-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* ── TRUST BAR ── */
+    .section-trust {
+      padding: 60px 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    .trust-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .trust-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    }
+
+    .trust-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-weight: 400;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .trust-text strong {
+      color: var(--white-soft);
+      font-weight: 600;
+    }
+
+    /* ── CTA BANNER ── */
+    .section-cta {
+      padding: 100px 32px;
+    }
+
+    .cta-banner {
+      max-width: 760px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #1a2c1a 0%, #0f2035 40%, #1a2a16 100%);
+      border: 1px solid rgba(201, 168, 76, 0.3);
+      border-radius: 24px;
+      padding: 64px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, 0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cta-headline {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.7rem, 3vw, 2.4rem);
+      color: var(--white);
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-subtext {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--gold);
+      color: var(--navy);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 15px 36px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.2px;
+    }
+
+    .btn-cta:hover {
+      background: var(--gold-light);
+      box-shadow: 0 8px 32px rgba(201, 168, 76, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border-soft);
+      padding: 32px;
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    .footer-text strong {
+      color: var(--text-mid);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1000px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+        text-align: center;
+      }
+
+      .hero-eyebrow {
+        justify-content: center;
+      }
+
+      .hero-subheadline {
+        max-width: none;
+      }
+
+      .hero-ctas {
+        justify-content: center;
+      }
+
+      .hero-visual {
+        order: -1;
+      }
+
+      .mockup-frame {
+        max-width: 400px;
+      }
+
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 700px) {
+      nav { padding: 0 20px; }
+      .nav-logo span:not(.house-icon) { display: none; }
+
+      .hero { padding: 90px 20px 60px; }
+      .hero-headline { font-size: 2.1rem; }
+
+      .section-features,
+      .section-how,
+      .section-cta { padding: 70px 20px; }
+
+      .features-grid { grid-template-columns: 1fr; }
+
+      .how-steps {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .how-steps::before { display: none; }
+
+      .cta-banner { padding: 44px 28px; }
+
+      .trust-inner { flex-direction: column; gap: 10px; }
+      .trust-line { width: 100px; height: 1px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════ NAV ════════════════════ -->
+<nav>
+  <a href="/" class="nav-logo">
+    <span class="house-icon">🏠</span>
+    ShowingDay
+  </a>
+  <div class="nav-actions">
+    <a href="/login" class="btn-nav-login">Login</a>
+    <a href="/login" class="btn-nav-demo">Try Demo</a>
+  </div>
+</nav>
+
+
+<!-- ════════════════════ HERO ════════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+
+    <!-- Left: copy -->
+    <div class="hero-content">
+      <div class="hero-eyebrow">Buyer Agent Tooling</div>
+      <h1 class="hero-headline serif">Your entire showing day — planned in minutes.</h1>
+      <p class="hero-subheadline">
+        Optimized routes, automatic scheduling, real-time confirmation tracking, and a beautiful itinerary for your clients. Built for buyer's agents who move fast.
+      </p>
+      <div class="hero-ctas">
+        <a href="/login" class="btn-hero-primary">Try the Demo &nbsp;→</a>
+        <a href="#how-it-works" class="btn-hero-ghost">See How It Works</a>
+      </div>
+    </div>
+
+    <!-- Right: mockup visual -->
+    <div class="hero-visual">
+      <div class="mockup-frame">
+
+        <!-- Browser chrome -->
+        <div class="mockup-chrome">
+          <div class="chrome-dots">
+            <div class="chrome-dot"></div>
+            <div class="chrome-dot"></div>
+            <div class="chrome-dot"></div>
+          </div>
+          <div class="chrome-url">localhost:5000/app · ShowingDay</div>
+        </div>
+
+        <!-- Map area -->
+        <div class="mockup-map">
+          <div class="map-road h1"></div>
+          <div class="map-road h2"></div>
+          <div class="map-road v1"></div>
+          <div class="map-road v2"></div>
+          <div class="map-road v3"></div>
+          <div class="map-road diag"></div>
+
+          <!-- Route connector SVG -->
+          <div class="route-connector">
+            <svg viewBox="0 0 460 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Dashed gold route line connecting markers -->
+              <path
+                d="M 64 34 C 100 34, 130 44, 174 44 C 210 44, 240 94, 294 94 C 330 94, 370 120, 394 120"
+                fill="none"
+                stroke="#C9A84C"
+                stroke-width="2"
+                stroke-dasharray="6 5"
+                stroke-linecap="round"
+                opacity="0.7"
+              />
+              <!-- Glow version -->
+              <path
+                d="M 64 34 C 100 34, 130 44, 174 44 C 210 44, 240 94, 294 94 C 330 94, 370 120, 394 120"
+                fill="none"
+                stroke="#C9A84C"
+                stroke-width="6"
+                stroke-linecap="round"
+                opacity="0.08"
+              />
+            </svg>
+          </div>
+
+          <div class="map-marker start m1">S</div>
+          <div class="map-marker m2">1</div>
+          <div class="map-marker m3">2</div>
+          <div class="map-marker m4">3</div>
+        </div>
+
+        <!-- Stop list sidebar -->
+        <div class="mockup-sidebar">
+          <div class="mockup-header-row">
+            <span class="mockup-title">Optimized Route</span>
+            <span class="mockup-meta">⏱ 4h 15min total</span>
+          </div>
+
+          <div class="mockup-stop">
+            <div class="mockup-stop-num">1</div>
+            <div class="mockup-stop-info">
+              <div class="mockup-stop-addr">1842 Lincoln Rd, Allegan, MI</div>
+              <div class="mockup-stop-time">1:00 PM – 1:30 PM &nbsp;·&nbsp; 18 min drive</div>
+            </div>
+            <span class="mockup-badge badge-confirmed">Confirmed</span>
+          </div>
+
+          <div class="mockup-stop">
+            <div class="mockup-stop-num">2</div>
+            <div class="mockup-stop-info">
+              <div class="mockup-stop-addr">4507 Prairie Ronde, Schoolcraft, MI</div>
+              <div class="mockup-stop-time">2:05 PM – 2:35 PM &nbsp;·&nbsp; 23 min drive</div>
+            </div>
+            <span class="mockup-badge badge-tentative">Tentative</span>
+          </div>
+
+          <div class="mockup-stop">
+            <div class="mockup-stop-num">3</div>
+            <div class="mockup-stop-info">
+              <div class="mockup-stop-addr">815 Morse Lake Ave, Otsego, MI</div>
+              <div class="mockup-stop-time">3:20 PM – 3:50 PM &nbsp;·&nbsp; 31 min drive</div>
+            </div>
+            <span class="mockup-badge badge-pending">Pending</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════ FEATURES ════════════════════ -->
+<section class="section-features" id="features">
+  <div class="section-label">What ShowingDay Does</div>
+  <h2 class="section-headline serif">Everything you need, nothing you don't.</h2>
+  <p class="section-subhead">Six tools that used to live in six different apps, now in one focused workflow.</p>
+
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <span class="feature-icon">🗺</span>
+      <div class="feature-title serif">Smart Route Optimization</div>
+      <p class="feature-desc">Enter your properties and get an optimized driving order with real travel times from Google Maps. No more guessing at how long the day will take.</p>
+    </div>
+
+    <div class="feature-card">
+      <span class="feature-icon">📅</span>
+      <div class="feature-title serif">One-Click Calendar Blocks</div>
+      <p class="feature-desc">Tentative showing blocks and travel buffers added to Google Calendar automatically. Confirmed = updated. Declined = removed. No manual editing.</p>
+    </div>
+
+    <div class="feature-card">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title serif">Real-Time Status Updates</div>
+      <p class="feature-desc">Connect ShowingTime via webhook and watch confirmation statuses update automatically — no manual toggling, no tab-switching, no refreshing.</p>
+    </div>
+
+    <div class="feature-card">
+      <span class="feature-icon">🔍</span>
+      <div class="feature-title serif">Property Research on Confirm</div>
+      <p class="feature-desc">The moment a showing is confirmed, get listing data, price history, days on market, and an AI-powered disclosure red-flag analysis.</p>
+    </div>
+
+    <div class="feature-card">
+      <span class="feature-icon">📱</span>
+      <div class="feature-title serif">Client-Facing Itinerary</div>
+      <p class="feature-desc">Generate a clean, shareable showing day page for your client with addresses, times, property photos, and a one-click calendar invite.</p>
+    </div>
+
+    <div class="feature-card">
+      <span class="feature-icon">🏆</span>
+      <div class="feature-title serif">Built for West Michigan</div>
+      <p class="feature-desc">Designed for the Allegan County / Grand Rapids market. Properties spaced 15–30 minutes apart? Rural routes with no reliable transit? This was built for you.</p>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════ HOW IT WORKS ════════════════════ -->
+<section class="section-how" id="how-it-works">
+  <div class="how-inner">
+    <div class="section-label">The Workflow</div>
+    <h2 class="section-headline serif">Three steps. Zero spreadsheets.</h2>
+    <p class="section-subhead">From client name to client itinerary in one focused session.</p>
+
+    <div class="how-steps">
+
+      <div class="how-step">
+        <div class="how-step-number">1</div>
+        <div class="how-step-title serif">Enter your client &amp; properties</div>
+        <p class="how-step-desc">Search your CRM (Lofty or GHL) or type a name. Paste property addresses, set your time window, choose start-loaded or end-loaded scheduling.</p>
+      </div>
+
+      <div class="how-step">
+        <div class="how-step-number">2</div>
+        <div class="how-step-title serif">Optimize &amp; schedule</div>
+        <p class="how-step-desc">Google Maps calculates the fastest route with real-time traffic. You get a complete showing day schedule — every stop, every time, every drive — in seconds.</p>
+      </div>
+
+      <div class="how-step">
+        <div class="how-step-number">3</div>
+        <div class="how-step-title serif">Request, confirm &amp; deliver</div>
+        <p class="how-step-desc">Submit ShowingTime requests from the built-in checklist. Track confirmations live. Then send your client a beautiful itinerary with one click.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════ TRUST BAR ════════════════════ -->
+<section class="section-trust">
+  <div class="trust-inner">
+    <div class="trust-line"></div>
+    <p class="trust-text">Used by agents at <strong>PREMIERE Group &middot; Real Broker LLC</strong> &middot; West Michigan</p>
+    <div class="trust-line"></div>
+  </div>
+</section>
+
+
+<!-- ════════════════════ CTA BANNER ════════════════════ -->
+<section class="section-cta">
+  <div class="cta-banner">
+    <h2 class="cta-headline serif">Ready to stop planning your showing day on paper?</h2>
+    <p class="cta-subtext">Try the demo — no signup required.</p>
+    <a href="/login" class="btn-cta">Launch Demo &nbsp;→</a>
+  </div>
+</section>
+
+
+<!-- ════════════════════ FOOTER ════════════════════ -->
+<footer>
+  <p class="footer-text">
+    <strong>ShowingDay</strong> by Jason O'Brien &middot; PREMIERE Group at Real Broker LLC<br>
+    Built for buyer's agents &middot; Powered by Google Maps + AI
+  </p>
+</footer>
+
+</body>
+</html>

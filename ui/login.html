@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — ShowingDay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0D1B2A;
+      --navy-mid:   #1a2d42;
+      --navy-card:  #132236;
+      --gold:       #C9A84C;
+      --gold-light: #e0c068;
+      --white:      #FFFFFF;
+      --white-soft: #f0f4f8;
+      --text-muted: #8fa4bc;
+      --text-mid:   #bccfe0;
+      --border:     rgba(201, 168, 76, 0.18);
+      --border-soft: rgba(255, 255, 255, 0.08);
+      --green:      #27c17c;
+      --radius:     10px;
+      --radius-lg:  16px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle radial background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(201, 168, 76, 0.06) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    /* ── Card ── */
+    .login-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 32px 80px rgba(0, 0, 0, 0.45),
+        0 0 40px rgba(201, 168, 76, 0.05);
+    }
+
+    /* ── Logo ── */
+    .login-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 32px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--gold);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .logo-wordmark {
+      font-family: 'DM Serif Display', serif;
+      font-size: 26px;
+      color: var(--gold);
+      letter-spacing: -0.3px;
+      line-height: 1;
+    }
+
+    /* ── Heading ── */
+    .login-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      color: var(--white);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    /* ── Demo info box ── */
+    .demo-notice {
+      background: rgba(39, 193, 124, 0.08);
+      border: 1px solid rgba(39, 193, 124, 0.25);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .demo-notice-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .demo-notice-text {
+      font-size: 12px;
+      color: var(--green);
+      line-height: 1.55;
+    }
+
+    /* ── Form ── */
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .form-field input {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 11px 14px;
+      transition: all 0.2s ease;
+      width: 100%;
+      outline: none;
+    }
+
+    .form-field input:focus {
+      border-color: var(--gold);
+      background: rgba(201, 168, 76, 0.06);
+      box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.1);
+    }
+
+    .form-field input::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+    /* ── Sign in button ── */
+    .btn-signin {
+      width: 100%;
+      background: var(--gold);
+      color: var(--navy);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 13px 24px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 6px;
+      letter-spacing: -0.1px;
+    }
+
+    .btn-signin:hover:not(:disabled) {
+      background: var(--gold-light);
+      box-shadow: 0 6px 20px rgba(201, 168, 76, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-signin:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(13, 27, 42, 0.3);
+      border-top-color: var(--navy);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Error message ── */
+    .error-msg {
+      background: rgba(224, 85, 85, 0.1);
+      border: 1px solid rgba(224, 85, 85, 0.3);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #e05555;
+      text-align: center;
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .error-msg.visible { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Divider ── */
+    .card-divider {
+      border: none;
+      border-top: 1px solid var(--border-soft);
+      margin: 24px 0 20px;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      display: block;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .back-link:hover { color: var(--text-mid); }
+
+    .back-link span {
+      margin-right: 4px;
+      opacity: 0.7;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .login-card { padding: 32px 24px; }
+      .login-title { font-size: 21px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+
+  <!-- Logo -->
+  <a href="/" class="login-logo">
+    <div class="logo-icon">🏠</div>
+    <span class="logo-wordmark">ShowingDay</span>
+  </a>
+
+  <h1 class="login-title">Sign In</h1>
+  <p class="login-subtitle">Access your ShowingDay dashboard</p>
+
+  <!-- Demo notice -->
+  <div class="demo-notice">
+    <span class="demo-notice-icon">✅</span>
+    <span class="demo-notice-text">Demo credentials are pre-filled. Click <strong>Sign In</strong> to explore the app.</span>
+  </div>
+
+  <!-- Form -->
+  <form class="login-form" id="login-form" novalidate>
+
+    <div class="form-field">
+      <label for="email">Email</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        value="demo@showingday.app"
+        autocomplete="email"
+        required
+      >
+    </div>
+
+    <div class="form-field">
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        value="demo1234"
+        autocomplete="current-password"
+        required
+      >
+    </div>
+
+    <!-- Error message -->
+    <div class="error-msg" id="error-msg" role="alert"></div>
+
+    <button type="submit" class="btn-signin" id="btn-signin">
+      Sign In
+    </button>
+
+  </form>
+
+  <hr class="card-divider">
+
+  <a href="/" class="back-link"><span>←</span> Back to home</a>
+
+</div>
+
+
+<script>
+(function () {
+  const form = document.getElementById('login-form');
+  const btn  = document.getElementById('btn-signin');
+  const err  = document.getElementById('error-msg');
+
+  function showError(msg) {
+    err.textContent = msg;
+    err.classList.add('visible');
+  }
+
+  function hideError() {
+    err.classList.remove('visible');
+    err.textContent = '';
+  }
+
+  function setLoading(loading) {
+    if (loading) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing in…';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = 'Sign In';
+    }
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    hideError();
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      showError('Please enter your email and password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        // Redirect to app
+        window.location.href = data.redirect || '/app';
+      } else {
+        setLoading(false);
+        showError(data.error || 'Invalid credentials. Please try again.');
+      }
+    } catch (ex) {
+      setLoading(false);
+      showError('Connection error — make sure the server is running.');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

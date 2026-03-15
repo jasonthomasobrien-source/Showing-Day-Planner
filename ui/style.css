@@ -1455,3 +1455,51 @@ select option {
 .pac-item-query { color: #c9a84c; }
 .pac-matched { color: #c9a84c; font-weight: 600; }
 .pac-logo::after { display: none; }
+
+/* ── Settings screen ───────────────────────────────────────────── */
+.form-select {
+  width: 100%;
+  background: var(--navy-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  appearance: none;
+  cursor: pointer;
+}
+.form-select:focus { outline: none; border-color: var(--gold); }
+
+.settings-integration-list { display: flex; flex-direction: column; gap: 16px; }
+
+.settings-integration-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.integration-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.integration-name { font-weight: 600; font-size: 14px; }
+
+.integration-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.badge-active   { background: rgba(76,175,136,0.15); color: #4caf88; border: 1px solid rgba(76,175,136,0.3); }
+.badge-inactive { background: rgba(255,255,255,0.06); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ── Calendar links modal ──────────────────────────────────────── */
+#cal-links-modal .modal-box a.btn:hover {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}

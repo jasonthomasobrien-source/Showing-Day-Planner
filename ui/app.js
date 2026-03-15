@@ -736,75 +736,99 @@ function placeRouteMarkers(route, origin, returnStop) {
 }
 
 // ── Calendar ───────────────────────────────────────────────────────────────────
+function buildGoogleCalendarUrl(title, startStr, endStr, location, description) {
+  // startStr / endStr: "1:00 PM" style — need to combine with session date
+  const session = AppState.session || {};
+  const dateStr = session.session_date || new Date().toISOString().split('T')[0];
+
+  function parseToGCal(timeStr, date) {
+    if (!timeStr) return '';
+    const d = new Date(`${date} ${timeStr}`);
+    if (isNaN(d)) return '';
+    // Format: YYYYMMDDTHHmmss (local time, no Z)
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  }
+
+  const start = parseToGCal(startStr, dateStr);
+  const end = parseToGCal(endStr, dateStr) || start.replace(/T\d{6}$/, m => {
+    // Add 30 min if no end
+    const t = parseInt(m.slice(1,3))*60 + parseInt(m.slice(3,5)) + 30;
+    return `T${String(Math.floor(t/60)%24).padStart(2,'0')}${String(t%60).padStart(2,'0')}00`;
+  });
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${start}/${end}`,
+    location: location || '',
+    details: description || '',
+    trp: 'true'  // show as tentative
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 async function handleAddToCalendar() {
   const session = AppState.session || {};
   const route = AppState.route || session.route || [];
+  const showingStops = route.filter(s => !s.is_return);
 
-  if (route.length === 0) {
+  if (showingStops.length === 0) {
     showToast('No route', 'Optimize a route first.', 'warning');
     return;
   }
 
-  showPlan([
-    `Creating Google Calendar events for ${route.length} showings`,
-    'Calling calendar_manager.py via /api/calendar/create',
-    'Creating TENTATIVE showing blocks + travel blocks for each stop',
-    'On failure: export .ics file for manual calendar import'
-  ]);
+  const clientName = session.client?.name || AppState.client?.name || 'Client';
 
-  const btn = $('btn-add-calendar');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Adding...'; }
+  // Build a Google Calendar URL for each showing stop
+  const calUrls = showingStops.map(stop => ({
+    address: stop.address,
+    url: buildGoogleCalendarUrl(
+      `🏠 TENTATIVE — Showing: ${stop.address.split(',')[0]}`,
+      stop.showing_start,
+      stop.showing_end,
+      stop.address,
+      `Showing for ${clientName}\nAddress: ${stop.address}\nArrival: ${stop.arrival_time}`
+    )
+  }));
 
-  try {
-    const result = await apiFetch('/api/calendar/create', {
-      method: 'POST',
-      body: {
-        route,
-        client_name: session.client?.name || AppState.client?.name || '',
-        session_date: session.session_date || ''
-      }
-    });
+  // Show modal with clickable links instead of silently opening popups
+  showCalendarLinksModal(calUrls, clientName);
 
-    hidePlan();
-
-    if (result.status === 'success') {
-      showToast('Calendar events created', 'Tentative blocks added to your calendar.', 'success');
-      // Update session
-      AppState.session = (await apiFetch('/api/session')).data;
-      updateStatusBar();
-      showScreen('status');
-      renderPropertyStatusCards();
-    } else if (result.status === 'fallback') {
-      // ICS download fallback
-      if (result.data?.ics_content) {
-        downloadICS(result.data.ics_content, session.session_date);
-        showToast('ICS file downloaded', 'Import this file into your calendar app manually.', 'warning', 7000);
-      } else {
-        showToast('Calendar unavailable', result.error || 'Configure Google Calendar to enable.', 'warning');
-      }
-      showScreen('status');
-      renderPropertyStatusCards();
-    } else {
-      showToast('Calendar failed', result.error || 'Unknown error', 'error');
-    }
-  } catch (e) {
-    hidePlan();
-    showToast('Error', e.message, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = 'Add to Calendar'; }
-  }
+  showScreen('status');
+  renderPropertyStatusCards();
 }
 
-function downloadICS(content, sessionDate) {
-  const blob = new Blob([content], { type: 'text/calendar' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `showings_${sessionDate || 'today'}.ics`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+function showCalendarLinksModal(calUrls, clientName) {
+  // Remove any existing modal
+  const existing = $('cal-links-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'cal-links-modal';
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:520px;width:100%;">
+      <h3 style="margin-bottom:4px;">Add to Google Calendar</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
+        Click each showing to open Google Calendar and add it. Events are pre-filled as tentative.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+        ${calUrls.map((item, i) => `
+          <a href="${item.url}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-align:left;padding:12px 16px;text-decoration:none;display:flex;gap:10px;align-items:center;">
+            <span style="background:var(--gold);color:var(--navy);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${i+1}</span>
+            <span style="font-size:13px;">${item.address}</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--gold);">Open →</span>
+          </a>
+        `).join('')}
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="$('cal-links-modal').remove()">Done</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 // ── Property status panel ──────────────────────────────────────────────────────
@@ -1308,12 +1332,90 @@ async function handleResetSession() {
   }
 }
 
+// ── Settings ───────────────────────────────────────────────────────────────────
+const SETTINGS_KEY = 'showingday_settings';
+
+const SETTINGS_FIELDS = [
+  'agent-name', 'brokerage', 'home-address', 'office-address',
+  'default-showing-min', 'default-direction',
+  'lofty-api-key', 'ghl-api-key', 'ghl-location-id',
+  'showingtime-api-key', 'sentrikey-api-key', 'fub-api-key', 'gmaps-api-key'
+];
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    SETTINGS_FIELDS.forEach(key => {
+      const el = $(`setting-${key}`);
+      if (el && saved[key] !== undefined) el.value = saved[key];
+    });
+    updateIntegrationBadges(saved);
+
+    // Pre-fill start address from home address if empty
+    const startEl = $('start-address');
+    if (startEl && !startEl.value && saved['home-address']) {
+      startEl.value = saved['home-address'];
+    }
+  } catch (e) {
+    console.warn('Could not load settings:', e);
+  }
+}
+
+function saveSettings() {
+  const saved = {};
+  SETTINGS_FIELDS.forEach(key => {
+    const el = $(`setting-${key}`);
+    if (el) saved[key] = el.value;
+  });
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(saved));
+  updateIntegrationBadges(saved);
+
+  // Sync home/office into AppState.config for use in route planning
+  if (saved['home-address']) AppState.config.default_start_address = saved['home-address'];
+  if (saved['office-address']) AppState.config.office_address = saved['office-address'];
+
+  const msg = $('settings-saved-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+}
+
+function updateIntegrationBadges(settings) {
+  const badges = {
+    'badge-lofty':       settings['lofty-api-key'],
+    'badge-ghl':         settings['ghl-api-key'],
+    'badge-showingtime': settings['showingtime-api-key'],
+    'badge-sentrikey':   settings['sentrikey-api-key'],
+    'badge-fub':         settings['fub-api-key'],
+    'badge-gmaps':       settings['gmaps-api-key'] || AppState.config?.maps_key,
+  };
+  Object.entries(badges).forEach(([id, val]) => {
+    const el = $(id);
+    if (!el) return;
+    if (val) {
+      el.textContent = 'Configured';
+      el.className = 'integration-badge badge-active';
+    } else {
+      el.textContent = 'Not configured';
+      el.className = 'integration-badge badge-inactive';
+    }
+  });
+}
+
 // ── Event binding ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize with one blank address row
   AppState.addresses = [''];
   renderAddressList();
   initReturnDestinationToggle();
+  loadSettings();
+
+  // Settings save button
+  $('btn-save-settings')?.addEventListener('click', saveSettings);
+
+  // Autocomplete on settings address fields
+  ['setting-home-address', 'setting-office-address'].forEach(id => {
+    const el = $(id);
+    if (el) attachAutocompleteWhenReady(el);
+  });
 
   // Load config and session
   Promise.all([loadConfig(), loadSession()]);

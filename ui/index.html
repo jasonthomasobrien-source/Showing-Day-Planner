@@ -53,6 +53,9 @@
       <button class="nav-tab" data-screen="delivery">
         <span>📤</span> Deliver
       </button>
+      <button class="nav-tab" data-screen="settings">
+        <span>⚙️</span> Settings
+      </button>
     </div>
   </div>
 
@@ -362,6 +365,154 @@
     </div>
 
   </div><!-- end screen-delivery -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 5 — SETTINGS
+  ════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-settings">
+    <div class="screen-header">
+      <h2>Settings</h2>
+      <p class="screen-subtitle">Your preferences and API integrations. Saved locally in your browser.</p>
+    </div>
+
+    <!-- Agent Info -->
+    <div class="form-section">
+      <div class="section-label">Agent Info</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Your Name</label>
+          <input type="text" id="setting-agent-name" placeholder="Jason O'Brien">
+        </div>
+        <div class="form-field">
+          <label>Brokerage</label>
+          <input type="text" id="setting-brokerage" placeholder="PREMIERE Group at Real Broker LLC">
+        </div>
+      </div>
+    </div>
+
+    <!-- Addresses -->
+    <div class="form-section">
+      <div class="section-label">Default Addresses</div>
+      <div class="form-field" style="margin-bottom:12px;">
+        <label>Home Address</label>
+        <input type="text" id="setting-home-address" placeholder="Your home address">
+      </div>
+      <div class="form-field">
+        <label>Office Address</label>
+        <input type="text" id="setting-office-address" placeholder="Your office address">
+      </div>
+    </div>
+
+    <!-- Showing Defaults -->
+    <div class="form-section">
+      <div class="section-label">Showing Defaults</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Default Showing Length (minutes)</label>
+          <input type="number" id="setting-default-showing-min" value="30" min="15" max="120" step="5">
+        </div>
+        <div class="form-field">
+          <label>Default Scheduling Direction</label>
+          <select id="setting-default-direction" class="form-select">
+            <option value="start-loaded">Start-Loaded (first showing ASAP)</option>
+            <option value="end-loaded">End-Loaded (last showing at window close)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Integrations -->
+    <div class="form-section">
+      <div class="section-label">API Integrations</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">These are saved locally and used when available. Leave blank to use manual mode.</p>
+
+      <div class="settings-integration-list">
+
+        <div class="settings-integration-item">
+          <div class="integration-header">
+            <div class="integration-name">🏡 Lofty CRM</div>
+            <div id="badge-lofty" class="integration-badge badge-inactive">Not configured</div>
+          </div>
+          <div class="form-field">
+            <label>Lofty API Key</label>
+            <input type="password" id="setting-lofty-api-key" placeholder="Lofty API key" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="settings-integration-item">
+          <div class="integration-header">
+            <div class="integration-name">⚡ GHL / Lead Connector</div>
+            <div id="badge-ghl" class="integration-badge badge-inactive">Not configured</div>
+          </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>GHL API Key</label>
+              <input type="password" id="setting-ghl-api-key" placeholder="GHL API key" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label>GHL Location ID</label>
+              <input type="text" id="setting-ghl-location-id" placeholder="Location ID">
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-integration-item">
+          <div class="integration-header">
+            <div class="integration-name">🏠 ShowingTime</div>
+            <div id="badge-showingtime" class="integration-badge badge-inactive">Not configured</div>
+          </div>
+          <div class="form-field">
+            <label>ShowingTime API Key <span style="color:var(--text-muted);font-weight:400;">(when available)</span></label>
+            <input type="password" id="setting-showingtime-api-key" placeholder="Contact ShowingTime support for API access" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="settings-integration-item">
+          <div class="integration-header">
+            <div class="integration-name">🔑 SentriKey / Supra</div>
+            <div id="badge-sentrikey" class="integration-badge badge-inactive">Not configured</div>
+          </div>
+          <div class="form-field">
+            <label>SentriKey API Key <span style="color:var(--text-muted);font-weight:400;">(when available)</span></label>
+            <input type="password" id="setting-sentrikey-api-key" placeholder="SentriKey API key" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="settings-integration-item">
+          <div class="integration-header">
+            <div class="integration-name">📊 Follow Up Boss</div>
+            <div id="badge-fub" class="integration-badge badge-inactive">Not configured</div>
+          </div>
+          <div class="form-field">
+            <label>Follow Up Boss API Key</label>
+            <input type="password" id="setting-fub-api-key" placeholder="FUB API key" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="settings-integration-item">
+          <div class="integration-header">
+            <div class="integration-name">🗺 Google Maps</div>
+            <div id="badge-gmaps" class="integration-badge badge-inactive">Not configured</div>
+          </div>
+          <div class="form-field">
+            <label>Google Maps API Key</label>
+            <input type="password" id="setting-gmaps-api-key" placeholder="Set in Vercel env vars for production" autocomplete="off">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Save -->
+    <div style="text-align:center;padding:8px 0 48px;">
+      <button class="btn btn-primary btn-lg" id="btn-save-settings" style="min-width:200px;">
+        💾 Save Settings
+      </button>
+      <div id="settings-saved-msg" style="display:none;margin-top:10px;color:#4caf88;font-size:13px;">✓ Settings saved</div>
+    </div>
+
+  </div><!-- end screen-settings -->
 
 </div><!-- end app-container -->
 

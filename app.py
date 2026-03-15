@@ -104,9 +104,44 @@ def startup_check():
 # ── Static UI ──────────────────────────────────────────────────────────────────
 
 @app.route("/")
-def index():
+def landing():
+    """Serve the marketing landing page."""
+    return send_from_directory(str(BASE_DIR / "ui"), "landing.html")
+
+
+@app.route("/login")
+def login_page():
+    """Serve the login page."""
+    return send_from_directory(str(BASE_DIR / "ui"), "login.html")
+
+
+@app.route("/app")
+def app_page():
     """Serve the agent-facing UI."""
     return send_from_directory(str(BASE_DIR / "ui"), "index.html")
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    """
+    Authenticate with demo credentials.
+
+    Body: {"email": "demo@showingday.app", "password": "demo1234"}
+    """
+    body = request.get_json() or {}
+    email = body.get("email", "").strip().lower()
+    password = body.get("password", "")
+    DEMO_EMAIL = os.getenv("DEMO_EMAIL", "demo@showingday.app")
+    DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo1234")
+    if email == DEMO_EMAIL.lower() and password == DEMO_PASSWORD:
+        return jsonify({"status": "success", "redirect": "/app"})
+    return jsonify({"status": "failure", "error": "Invalid credentials"}), 401
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    """Log out the current session."""
+    return jsonify({"status": "success"})
 
 
 @app.route("/output/<path:filename>")
