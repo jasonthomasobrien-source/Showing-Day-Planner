@@ -1503,3 +1503,426 @@ select option {
   border-color: var(--gold);
   background: rgba(201,168,76,0.08);
 }
+
+/* ── Mode selector ─────────────────────────────────────────────── */
+.mode-selector-section {
+  padding-bottom: 0;
+}
+
+.mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mode-btn {
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  color: var(--white);
+}
+
+.mode-btn:hover {
+  border-color: rgba(201,168,76,0.4);
+  background: rgba(201,168,76,0.05);
+}
+
+.mode-btn.active {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+
+.mode-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.mode-label {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: var(--white);
+}
+
+.mode-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Multi-client groups ────────────────────────────────────────── */
+.client-group-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.client-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.client-group-header:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.client-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.client-group-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-badge-1 { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+.group-badge-2 { background: rgba(74,158,255,0.12); color: #4a9eff; border: 1px solid rgba(74,158,255,0.3); }
+.group-badge-3 { background: rgba(76,175,136,0.12); color: #4caf88; border: 1px solid rgba(76,175,136,0.3); }
+.group-badge-4 { background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+
+.client-group-collapse-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.client-group-card.collapsed .client-group-collapse-icon {
+  transform: rotate(-90deg);
+}
+
+.client-group-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.client-group-card.collapsed .client-group-body {
+  display: none;
+}
+
+.client-group-lookup-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.client-group-lookup-row input {
+  flex: 1;
+}
+
+.client-group-window {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.client-group-addresses-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+.client-group-remove-btn {
+  font-size: 11px;
+  color: var(--status-declined);
+  background: none;
+  border: 1px solid rgba(224,85,85,0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.client-group-remove-btn:hover {
+  background: rgba(224,85,85,0.1);
+}
+
+#btn-add-client-group {
+  margin-top: 4px;
+}
+
+/* Multi-group route divider */
+.route-group-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 6px;
+  margin: 4px 0;
+}
+
+.route-group-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+
+.route-group-divider-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.route-group-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.route-group-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-mid);
+}
+
+.route-group-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Reschedule preview modal ───────────────────────────────────── */
+#reschedule-preview-modal .modal-box {
+  max-width: 560px;
+  width: 100%;
+}
+
+.reschedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13px;
+}
+
+.reschedule-table th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.reschedule-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+
+.reschedule-table tr:last-child td {
+  border-bottom: none;
+}
+
+.reschedule-addr {
+  font-size: 12px;
+  color: var(--text-mid);
+  max-width: 180px;
+}
+
+.reschedule-time-was {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  font-size: 12px;
+}
+
+.reschedule-time-now {
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.reschedule-time-unchanged {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.reschedule-badge-changed {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(201,168,76,0.15);
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Notification triggers grid ─────────────────────────────────── */
+.notification-triggers {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.notif-grid-header {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border);
+}
+
+.notif-col-header {
+  padding: 8px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+}
+
+.notif-col-header:last-child {
+  border-right: none;
+}
+
+.notif-trigger-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.notif-trigger-row:last-child {
+  border-bottom: none;
+}
+
+.notif-trigger-label {
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+
+.notif-party-cell {
+  padding: 10px 14px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.notif-party-cell:last-child {
+  border-right: none;
+}
+
+.notif-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-toggle-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+/* Toggle switch (CSS only) */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  top: 2px;
+  left: 2px;
+  transition: all 0.2s ease;
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: rgba(201,168,76,0.25);
+  border-color: rgba(201,168,76,0.4);
+}
+
+.toggle-switch input:checked + .toggle-track::after {
+  background: var(--gold);
+  transform: translateX(14px);
+}
+
+/* ── Coming soon badge ──────────────────────────────────────────── */
+.coming-soon-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #f0a500;
+  background: rgba(240,165,0,0.1);
+  border: 1px solid rgba(240,165,0,0.3);
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-left: 8px;
+  vertical-align: middle;
+}

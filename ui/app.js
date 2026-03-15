@@ -25,6 +25,8 @@ const AppState = {
   returnCustomAddress: '',
   startAddress: '',
   directionsRenderer: null,
+  mode: 'trip',           // 'trip' | 'showings'
+  clientGroups: [],       // [{id, clientName, addresses, windowStart, windowEnd}]
 };
 
 // ── Utility ────────────────────────────────────────────────────────────────────
@@ -312,6 +314,243 @@ function renderAddressList() {
   });
 }
 
+// ── Mode selector ──────────────────────────────────────────────────────────────
+function initModeSelector() {
+  $$('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+  });
+}
+
+function switchMode(mode) {
+  AppState.mode = mode;
+
+  // Update button active states
+  $$('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Toggle section visibility
+  const single = $('single-client-section');
+  const multi  = $('multi-client-section');
+  if (single) single.style.display = mode === 'trip'     ? '' : 'none';
+  if (multi)  multi.style.display  = mode === 'showings' ? '' : 'none';
+
+  // Seed one group if switching to showings and none exist
+  if (mode === 'showings' && AppState.clientGroups.length === 0) {
+    addClientGroup();
+  }
+}
+
+// ── Client groups (Plan Showings mode) ─────────────────────────────────────────
+let _groupIdCounter = 1;
+
+function addClientGroup() {
+  const id = _groupIdCounter++;
+  AppState.clientGroups.push({
+    id,
+    clientName: '',
+    addresses: [''],
+    windowStart: '13:00',
+    windowEnd: '18:00'
+  });
+  renderClientGroups();
+  // Focus the new group's client name input after render
+  setTimeout(() => {
+    const input = $(`cg-client-${id}`);
+    if (input) input.focus();
+  }, 50);
+}
+
+function removeClientGroup(id) {
+  if (AppState.clientGroups.length <= 1) {
+    showToast('Cannot remove', 'At least one client group is required.', 'warning');
+    return;
+  }
+  AppState.clientGroups = AppState.clientGroups.filter(g => g.id !== id);
+  renderClientGroups();
+}
+
+function toggleGroupCollapse(id) {
+  const card = $(`cg-card-${id}`);
+  if (card) card.classList.toggle('collapsed');
+}
+
+function renderClientGroups() {
+  const list = $('client-groups-list');
+  if (!list) return;
+
+  const groupColors = ['#C9A84C', '#4a9eff', '#4caf88', '#a78bfa'];
+
+  list.innerHTML = AppState.clientGroups.map((group, gIdx) => {
+    const badgeClass = `group-badge-${Math.min(gIdx + 1, 4)}`;
+    const color = groupColors[gIdx % groupColors.length];
+    const showRemove = AppState.clientGroups.length > 1;
+
+    const addrRows = group.addresses.map((addr, aIdx) => `
+      <div class="address-row" id="cg-addr-row-${group.id}-${aIdx}">
+        <span class="addr-num">${aIdx + 1}</span>
+        <input type="text" value="${addr}"
+               placeholder="Full property address, City, MI"
+               data-gid="${group.id}" data-aidx="${aIdx}"
+               id="cg-addr-${group.id}-${aIdx}">
+        <button class="btn-remove-addr" title="Remove"
+                data-gid="${group.id}" data-aidx="${aIdx}">×</button>
+      </div>
+    `).join('');
+
+    return `
+      <div class="client-group-card" id="cg-card-${group.id}">
+        <div class="client-group-header" onclick="toggleGroupCollapse(${group.id})">
+          <div class="client-group-title">
+            <span class="client-group-badge ${badgeClass}" style="color:${color};">
+              Group ${gIdx + 1}
+            </span>
+            <span id="cg-title-label-${group.id}">
+              ${group.clientName || 'New Client'}
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${showRemove ? `<button class="client-group-remove-btn" onclick="event.stopPropagation();removeClientGroup(${group.id})">Remove</button>` : ''}
+            <span class="client-group-collapse-icon">▾</span>
+          </div>
+        </div>
+
+        <div class="client-group-body">
+          <!-- Client lookup -->
+          <div class="form-field">
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);">Client</label>
+            <div class="client-group-lookup-row">
+              <input type="text" id="cg-client-${group.id}"
+                     value="${group.clientName}"
+                     placeholder="Client name (e.g. Sarah Johnson)"
+                     data-gid="${group.id}">
+              <button class="btn btn-secondary btn-sm" onclick="handleGroupClientLookup(${group.id})">Search CRM</button>
+            </div>
+          </div>
+
+          <!-- Time window -->
+          <div>
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);display:block;margin-bottom:6px;">Availability Window</label>
+            <div class="client-group-window">
+              <div class="form-field">
+                <label>Start Time</label>
+                <input type="time" id="cg-start-${group.id}" value="${group.windowStart}" data-gid="${group.id}">
+              </div>
+              <div class="form-field">
+                <label>End Time</label>
+                <input type="time" id="cg-end-${group.id}" value="${group.windowEnd}" data-gid="${group.id}">
+              </div>
+            </div>
+          </div>
+
+          <!-- Properties -->
+          <div>
+            <div class="client-group-addresses-header">
+              <span>Properties</span>
+              <button class="btn btn-ghost btn-sm" onclick="addGroupAddressRow(${group.id})">+ Add</button>
+            </div>
+            <div id="cg-addr-list-${group.id}">${addrRows}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Bind events for all group inputs
+  AppState.clientGroups.forEach(group => {
+    // Client name input
+    const clientInput = $(`cg-client-${group.id}`);
+    if (clientInput) {
+      clientInput.addEventListener('input', e => {
+        group.clientName = e.target.value;
+        const label = $(`cg-title-label-${group.id}`);
+        if (label) label.textContent = e.target.value || 'New Client';
+      });
+    }
+
+    // Time window inputs
+    const startInput = $(`cg-start-${group.id}`);
+    if (startInput) startInput.addEventListener('change', e => { group.windowStart = e.target.value; });
+
+    const endInput = $(`cg-end-${group.id}`);
+    if (endInput) endInput.addEventListener('change', e => { group.windowEnd = e.target.value; });
+
+    // Address inputs
+    group.addresses.forEach((addr, aIdx) => {
+      const addrInput = $(`cg-addr-${group.id}-${aIdx}`);
+      if (addrInput) {
+        addrInput.addEventListener('input', e => {
+          group.addresses[aIdx] = e.target.value;
+        });
+        addrInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); addGroupAddressRow(group.id); }
+        });
+        attachAutocompleteWhenReady(addrInput);
+      }
+
+      // Remove button
+      const removeBtn = document.querySelector(`[data-gid="${group.id}"][data-aidx="${aIdx}"].btn-remove-addr`);
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => removeGroupAddressRow(group.id, aIdx));
+      }
+    });
+  });
+}
+
+function addGroupAddressRow(groupId) {
+  const group = AppState.clientGroups.find(g => g.id === groupId);
+  if (!group) return;
+  group.addresses.push('');
+  renderClientGroups();
+  // Focus new row
+  setTimeout(() => {
+    const inputs = $$(`#cg-addr-list-${groupId} input`);
+    const last = inputs[inputs.length - 1];
+    if (last) last.focus();
+  }, 50);
+}
+
+function removeGroupAddressRow(groupId, aIdx) {
+  const group = AppState.clientGroups.find(g => g.id === groupId);
+  if (!group || group.addresses.length <= 1) return;
+  group.addresses.splice(aIdx, 1);
+  renderClientGroups();
+}
+
+async function handleGroupClientLookup(groupId) {
+  const group = AppState.clientGroups.find(g => g.id === groupId);
+  if (!group) return;
+  const nameInput = $(`cg-client-${groupId}`);
+  const name = nameInput?.value?.trim() || '';
+  if (!name) {
+    showToast('Enter a name', 'Type the client name before searching.', 'warning');
+    return;
+  }
+
+  const btn = nameInput.nextElementSibling;
+  const origText = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  try {
+    const result = await apiFetch('/api/client-lookup', { method: 'POST', body: { name } });
+    if (result.status === 'success' && !result.data.not_found) {
+      group.clientName = result.data.name || name;
+      group.clientEmail = result.data.email || '';
+      group.clientPhone = result.data.phone || '';
+      if (nameInput) nameInput.value = group.clientName;
+      const label = $(`cg-title-label-${groupId}`);
+      if (label) label.textContent = group.clientName;
+      showToast('Client found', `Loaded from ${result.data.crm_source?.toUpperCase() || 'CRM'}`, 'success');
+    } else {
+      showToast('Not found', 'Client not found in CRM. Fill in details manually.', 'warning');
+    }
+  } catch (e) {
+    showToast('Lookup error', e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+  }
+}
+
 // ── Return destination ─────────────────────────────────────────────────────────
 function resolveReturnAddress(startAddress) {
   switch (AppState.returnDestination) {
@@ -346,6 +585,12 @@ function initReturnDestinationToggle() {
 
 // ── Route optimization ─────────────────────────────────────────────────────────
 async function handleOptimizeRoute() {
+  if (AppState.mode === 'showings') {
+    await handleOptimizeMultiGroup();
+    return;
+  }
+
+  // ── Single-client (Plan a Trip) mode ─────────────────────────────────────────
   const addresses = AppState.addresses.filter(a => a.trim());
   if (addresses.length === 0) {
     showToast('No addresses', 'Add at least one property address.', 'warning');
@@ -430,7 +675,398 @@ async function handleOptimizeRoute() {
   }
 }
 
+async function handleOptimizeMultiGroup() {
+  const groups = AppState.clientGroups;
+  const sessionDate = $('session-date')?.value;
+  const startAddress = $('start-address')?.value || AppState.config.default_start_address || 'Plainwell, MI';
+  const maxMinutes = parseInt($('max-showing-minutes')?.value || '30');
+  const direction = $$('.direction-toggle .active')[0]?.dataset.direction || 'start-loaded';
+
+  if (!sessionDate) {
+    showToast('Date required', 'Please select the showing day.', 'warning');
+    return;
+  }
+
+  // Validate each group has at least one address
+  for (const group of groups) {
+    const addrs = group.addresses.filter(a => a.trim());
+    if (addrs.length === 0) {
+      showToast('Missing addresses', `Add at least one property for ${group.clientName || `Group ${groups.indexOf(group) + 1}`}.`, 'warning');
+      return;
+    }
+  }
+
+  showPlan([
+    `Optimizing routes for ${groups.length} client group${groups.length > 1 ? 's' : ''}`,
+    `Each group optimized independently via route_optimizer`,
+    `Results displayed with color-coding per group in route sidebar`,
+    `On failure: return mock data so the session can continue`
+  ]);
+
+  const btn = $('btn-optimize');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Optimizing...';
+
+  const groupResults = [];
+
+  try {
+    for (const group of groups) {
+      const addrs = group.addresses.filter(a => a.trim());
+      const sessionDatetime = `${sessionDate} ${group.windowStart || '13:00'}`;
+      const result = await apiFetch('/api/optimize-route', {
+        method: 'POST',
+        body: {
+          addresses: addrs,
+          start_address: startAddress,
+          session_datetime: sessionDatetime,
+          window_end_time: group.windowEnd || '18:00',
+          max_showing_minutes: maxMinutes,
+          direction
+        }
+      });
+
+      if (result.status === 'success') {
+        groupResults.push({
+          groupId: group.id,
+          clientName: group.clientName || `Group ${groups.indexOf(group) + 1}`,
+          routeData: result.data
+        });
+        if (result.data.warnings?.length > 0) {
+          showToast(
+            `Schedule warning — ${group.clientName || 'Group ' + (groups.indexOf(group) + 1)}`,
+            result.data.warnings[0], 'warning', 8000
+          );
+        }
+      } else {
+        showToast('Optimization failed', `${group.clientName || 'Group'}: ${result.error}`, 'error');
+      }
+    }
+
+    hidePlan();
+
+    if (groupResults.length === 0) {
+      showToast('No results', 'All groups failed to optimize.', 'error');
+      return;
+    }
+
+    // Flatten all stops into one route array, tagging each with groupIdx
+    const flatRoute = [];
+    groupResults.forEach((gr, gIdx) => {
+      gr.routeData.route.forEach(stop => {
+        flatRoute.push({ ...stop, _groupIdx: gIdx, _groupLabel: gr.clientName });
+      });
+    });
+
+    AppState.route = flatRoute;
+    AppState.startAddress = startAddress;
+    AppState.multiGroupResults = groupResults;
+    AppState.session = (await apiFetch('/api/session')).data;
+    updateStatusBar();
+
+    const totalStops = groupResults.reduce((s, gr) => s + gr.routeData.route.filter(r => !r.is_return).length, 0);
+    showToast('Routes optimized', `${groups.length} groups · ${totalStops} total stops`, 'success');
+
+    renderRouteMultiGroup(groupResults, startAddress);
+    showScreen('route');
+
+  } catch (e) {
+    hidePlan();
+    showToast('Network error', e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+// ── Auto-reschedule on cancellation ────────────────────────────────────────────
+function promptAutoReschedule(address) {
+  const remaining = (AppState.session?.properties || AppState.route || [])
+    .filter(p => p.address !== address && !p.is_return && p.status !== 'declined');
+  const n = remaining.length;
+
+  if (n === 0) return; // nothing to reschedule
+
+  showConfirmModal(
+    'Showing Canceled — Reschedule?',
+    `${address.split(',')[0]} was canceled. Compress the remaining ${n} showing${n !== 1 ? 's' : ''} to eliminate the gap?`,
+    () => handleAutoReschedule(address)
+  );
+}
+
+async function handleAutoReschedule(canceledAddress) {
+  const sessionDate = AppState.session?.session_date;
+  const startAddress = AppState.startAddress || AppState.config.default_start_address || 'Plainwell, MI';
+
+  // Build remaining addresses from session properties, preserving original order
+  const props = (AppState.session?.properties || []).filter(
+    p => p.address !== canceledAddress && !p.is_return && p.status !== 'declined'
+  );
+  const remainingAddresses = props.map(p => p.address);
+
+  if (remainingAddresses.length === 0) {
+    showToast('No showings remaining', 'All showings have been removed or declined.', 'info');
+    return;
+  }
+
+  // Re-use existing time window and direction from the original route
+  const startTime = props[0]?.showing_start || '1:00 PM';
+  // Parse "1:00 PM" → HH:MM for the API
+  function parseTime12to24(t) {
+    if (!t) return '13:00';
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!m) return '13:00';
+    let h = parseInt(m[1]);
+    const min = m[2];
+    const ampm = m[3].toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${min}`;
+  }
+
+  const windowStart24 = sessionDate
+    ? `${sessionDate} ${parseTime12to24(startTime)}`
+    : `${new Date().toISOString().split('T')[0]} 13:00`;
+
+  // Find window end from the last confirmed/pending stop's showing_end
+  const lastProp = props[props.length - 1];
+  const windowEnd24 = lastProp?.showing_end ? parseTime12to24(lastProp.showing_end) : '18:00';
+
+  const maxMinutes = AppState.session?.max_showing_minutes || 30;
+  const direction = $$('.direction-toggle .active')[0]?.dataset.direction || 'start-loaded';
+  const returnAddress = resolveReturnAddress(startAddress);
+
+  try {
+    const result = await apiFetch('/api/optimize-route', {
+      method: 'POST',
+      body: {
+        addresses: remainingAddresses,
+        start_address: startAddress,
+        return_address: returnAddress,
+        session_datetime: windowStart24,
+        window_end_time: windowEnd24,
+        max_showing_minutes: maxMinutes,
+        direction
+      }
+    });
+
+    if (result.status !== 'success') {
+      showToast('Reschedule failed', result.error || 'Unknown error', 'error');
+      return;
+    }
+
+    const oldRoute = AppState.route || [];
+    const newRoute = result.data.route;
+
+    showReschedulePreviewModal(oldRoute, newRoute, async () => {
+      // Apply: update session and re-render
+      await apiFetch('/api/session/update', {
+        method: 'POST',
+        body: { route: newRoute }
+      });
+      AppState.route = newRoute;
+      AppState.session = (await apiFetch('/api/session')).data;
+      updateStatusBar();
+      renderRoute(result.data);
+      renderPropertyStatusCards();
+      showToast('Schedule updated', `${remainingAddresses.length} showing${remainingAddresses.length !== 1 ? 's' : ''} rescheduled.`, 'success');
+    });
+
+  } catch (e) {
+    showToast('Reschedule error', e.message, 'error');
+  }
+}
+
+function showReschedulePreviewModal(oldRoute, newRoute, onApply) {
+  const existing = $('reschedule-preview-modal');
+  if (existing) existing.remove();
+
+  // Build a map of old times by address
+  const oldMap = {};
+  (oldRoute || []).forEach(stop => {
+    if (!stop.is_return) {
+      oldMap[stop.address] = { start: stop.showing_start, end: stop.showing_end };
+    }
+  });
+
+  const rows = (newRoute || []).filter(s => !s.is_return).map(stop => {
+    const old = oldMap[stop.address];
+    const changed = old && (old.start !== stop.showing_start || old.end !== stop.showing_end);
+    const wasCell = old
+      ? `<div class="reschedule-time-was">${old.start} – ${old.end}</div>`
+      : `<div class="reschedule-time-unchanged">—</div>`;
+    const nowCell = changed
+      ? `<div class="reschedule-time-now">${stop.showing_start} – ${stop.showing_end} <span class="reschedule-badge-changed">changed</span></div>`
+      : `<div class="reschedule-time-unchanged">${stop.showing_start} – ${stop.showing_end}</div>`;
+    return `
+      <tr>
+        <td class="reschedule-addr">${stop.address.split(',')[0]}</td>
+        <td>${wasCell}</td>
+        <td>${nowCell}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'reschedule-preview-modal';
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:560px;width:100%;">
+      <h3 style="margin-bottom:4px;">Reschedule Preview</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">
+        Review the updated times before applying. Changes are highlighted in gold.
+      </p>
+      <table class="reschedule-table">
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Was</th>
+            <th>Now</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="modal-actions" style="margin-top:8px;">
+        <button class="btn btn-secondary" id="btn-reschedule-keep">Keep Current Times</button>
+        <button class="btn btn-primary" id="btn-reschedule-apply">Apply Changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  $('btn-reschedule-keep').addEventListener('click', () => modal.remove());
+  $('btn-reschedule-apply').addEventListener('click', () => {
+    modal.remove();
+    onApply();
+  });
+}
+
+function showConfirmModal(title, message, onConfirm) {
+  const modal = $('confirm-modal');
+  const titleEl = $('modal-title');
+  const msgEl = $('modal-message');
+  const confirmBtn = $('btn-confirm-modal');
+
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  if (modal) modal.classList.add('visible');
+
+  // Remove old listener by cloning the button
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  newConfirmBtn.addEventListener('click', () => {
+    modal.classList.remove('visible');
+    onConfirm();
+  });
+}
+
 // ── Route rendering ────────────────────────────────────────────────────────────
+function renderRouteMultiGroup(groupResults, startAddress) {
+  const sidebar = $('route-stops-list');
+  if (!sidebar) return;
+
+  clearMapMarkers();
+
+  const groupColors = ['#C9A84C', '#4a9eff', '#4caf88', '#a78bfa'];
+
+  // Warning banner
+  const warningBanner = $('route-warning-banner');
+  if (warningBanner) warningBanner.style.display = 'none';
+
+  // Route stats
+  const totalStops = groupResults.reduce((s, gr) => s + gr.routeData.route.filter(r => !r.is_return).length, 0);
+  const totalMin = groupResults.reduce((s, gr) => s + (gr.routeData.total_duration_minutes || 0), 0);
+  const statsEl = $('route-total-duration');
+  if (statsEl) statsEl.textContent = `${totalStops} stops · ${totalMin} min total`;
+
+  // Color legend at top
+  const legendItems = groupResults.map((gr, gIdx) => `
+    <div class="route-group-legend-item">
+      <div class="route-group-legend-dot" style="background:${groupColors[gIdx % groupColors.length]};"></div>
+      <span>${gr.clientName}</span>
+    </div>
+  `).join('');
+
+  const startCard = startAddress ? `
+    <div class="route-stop-card route-stop-start">
+      <div class="route-stop-header">
+        <div class="stop-number" style="background:#4a9eff;font-size:13px;font-weight:800;">S</div>
+        <div class="stop-address">${startAddress}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);padding:2px 0 0 36px;">Starting location</div>
+    </div>` : '';
+
+  let stopsHtml = '';
+  groupResults.forEach((gr, gIdx) => {
+    const color = groupColors[gIdx % groupColors.length];
+    stopsHtml += `
+      <div class="route-group-divider">
+        <div class="route-group-divider-line"></div>
+        <div class="route-group-divider-label" style="background:${color}20;color:${color};border:1px solid ${color}40;">
+          ${gr.clientName}
+        </div>
+        <div class="route-group-divider-line"></div>
+      </div>
+    `;
+
+    gr.routeData.route.forEach(stop => {
+      if (stop.is_return) {
+        stopsHtml += `
+          <div class="route-stop-card route-stop-return" style="border-left:3px solid ${color};">
+            <div class="route-stop-header">
+              <div class="stop-number" style="background:var(--text-muted);font-size:14px;">🏠</div>
+              <div class="stop-address">${stop.address}</div>
+            </div>
+            <div class="stop-times">
+              <div class="stop-time-item">
+                <div class="stop-time-label">Arrive</div>
+                <div class="stop-time-value">${formatTime(stop.arrival_time)}</div>
+              </div>
+            </div>
+          </div>`;
+      } else {
+        stopsHtml += `
+          <div class="route-stop-card" data-order="${stop.order}" style="border-left:3px solid ${color};">
+            <div class="route-stop-header">
+              <div class="stop-number" style="background:${color};color:#0D1B2A;">${stop.order}</div>
+              <div class="stop-address">${stop.address}</div>
+            </div>
+            <div class="stop-times">
+              <div class="stop-time-item">
+                <div class="stop-time-label">Arrive</div>
+                <div class="stop-time-value">${formatTime(stop.arrival_time)}</div>
+              </div>
+              <div class="stop-time-item">
+                <div class="stop-time-label">Showing</div>
+                <div class="stop-time-value">${formatTime(stop.showing_start)} – ${formatTime(stop.showing_end)}</div>
+              </div>
+            </div>
+            ${stop.travel_to_next_minutes ? `
+              <div class="stop-travel-next">
+                <span>🚗</span>
+                <span>${stop.travel_to_next_minutes} min to next stop</span>
+              </div>
+            ` : ''}
+          </div>`;
+      }
+    });
+  });
+
+  sidebar.innerHTML = `
+    <div class="route-group-legend">${legendItems}</div>
+    ${startCard}
+    ${stopsHtml}
+  `;
+
+  // Map: show all stops — use first group's route for directions
+  if (AppState.map && groupResults.length > 0) {
+    initRouteOnMap(groupResults[0].routeData.route);
+  } else if (!AppState.config.maps_key) {
+    renderMapPlaceholder(totalStops);
+  }
+}
+
 function renderRoute(routeData) {
   const { route, total_duration_minutes, fits_window } = routeData;
   const sidebar = $('route-stops-list');
@@ -1002,15 +1638,19 @@ async function updatePropertyStatus(address, status, idx) {
         loadPropertyResearch(address, idx);
       }
 
-      // If declined, prompt calendar deletion
-      const prop = AppState.session?.properties?.find(p => p.address === address);
-      if (status === 'declined' && prop?.calendar_event_id) {
-        if (confirm(`Delete calendar event for ${address.split(',')[0]}?`)) {
-          await apiFetch('/api/calendar/delete', {
-            method: 'POST',
-            body: { event_id: prop.calendar_event_id, address }
-          });
+      // If declined, prompt calendar deletion then auto-reschedule
+      if (status === 'declined') {
+        const prop = AppState.session?.properties?.find(p => p.address === address);
+        if (prop?.calendar_event_id) {
+          if (confirm(`Delete calendar event for ${address.split(',')[0]}?`)) {
+            await apiFetch('/api/calendar/delete', {
+              method: 'POST',
+              body: { event_id: prop.calendar_event_id, address }
+            });
+          }
         }
+        // Prompt auto-reschedule after a short delay so the UI settles
+        setTimeout(() => promptAutoReschedule(address), 300);
       }
     } else {
       showToast('Update failed', result.error || 'Unknown error', 'error');
@@ -1386,6 +2026,18 @@ const SETTINGS_FIELDS = [
   'showingtime-api-key', 'sentrikey-api-key', 'fub-api-key', 'gmaps-api-key'
 ];
 
+// Notification toggle IDs — each maps to a checkbox
+const NOTIF_TOGGLE_IDS = [
+  'notif-requested-agent-sms',  'notif-requested-agent-email',
+  'notif-requested-client-sms', 'notif-requested-client-email',
+  'notif-confirmed-agent-sms',  'notif-confirmed-agent-email',
+  'notif-confirmed-client-sms', 'notif-confirmed-client-email',
+  'notif-rescheduled-agent-sms',  'notif-rescheduled-agent-email',
+  'notif-rescheduled-client-sms', 'notif-rescheduled-client-email',
+  'notif-canceled-agent-sms',  'notif-canceled-agent-email',
+  'notif-canceled-client-sms', 'notif-canceled-client-email',
+];
+
 function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -1393,6 +2045,13 @@ function loadSettings() {
       const el = $(`setting-${key}`);
       if (el && saved[key] !== undefined) el.value = saved[key];
     });
+
+    // Load notification toggles (checkboxes)
+    NOTIF_TOGGLE_IDS.forEach(id => {
+      const el = $(id);
+      if (el && saved[id] !== undefined) el.checked = saved[id] === true || saved[id] === 'true';
+    });
+
     updateIntegrationBadges(saved);
 
     // Pre-fill start address from home address if empty
@@ -1411,6 +2070,13 @@ function saveSettings() {
     const el = $(`setting-${key}`);
     if (el) saved[key] = el.value;
   });
+
+  // Save notification toggles
+  NOTIF_TOGGLE_IDS.forEach(id => {
+    const el = $(id);
+    if (el) saved[id] = el.checked;
+  });
+
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(saved));
   updateIntegrationBadges(saved);
 
@@ -1420,6 +2086,18 @@ function saveSettings() {
 
   const msg = $('settings-saved-msg');
   if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+}
+
+// Helper: get current notification preferences from localStorage
+function getNotificationPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const prefs = {};
+    NOTIF_TOGGLE_IDS.forEach(id => { prefs[id] = saved[id] === true || saved[id] === 'true'; });
+    return prefs;
+  } catch (e) {
+    return {};
+  }
 }
 
 function updateIntegrationBadges(settings) {
@@ -1450,6 +2128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   AppState.addresses = [''];
   renderAddressList();
   initReturnDestinationToggle();
+  initModeSelector();
   loadSettings();
 
   // Settings save button
@@ -1494,8 +2173,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-manual-entry')?.addEventListener('click', () => showManualEntry());
   $('btn-save-manual-client')?.addEventListener('click', saveManualClient);
 
-  // --- Add address ---
+  // --- Add address (single-client mode) ---
   $('btn-add-address')?.addEventListener('click', () => addAddressRow());
+
+  // --- Add client group (multi-client mode) ---
+  $('btn-add-client-group')?.addEventListener('click', () => addClientGroup());
 
   // --- Optimize route ---
   $('btn-optimize')?.addEventListener('click', handleOptimizeRoute);
