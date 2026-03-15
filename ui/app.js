@@ -40,14 +40,18 @@ function showToast(title, message = '', type = 'info', duration = 4500) {
       <div class="toast-title">${title}</div>
       ${message ? `<div class="toast-message">${message}</div>` : ''}
     </div>
+    <button class="toast-close" onclick="this.closest('.toast').remove()" title="Dismiss">×</button>
   `;
   container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(20px)';
-    toast.style.transition = 'all 0.3s ease';
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
+  // Errors stay until manually dismissed; everything else auto-hides
+  if (type !== 'error') {
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(20px)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
 }
 
 function showWebhookNotification(message) {

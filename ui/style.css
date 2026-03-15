@@ -1305,6 +1305,12 @@ select option {
 .toast-body { flex: 1; }
 .toast-title { font-weight: 600; margin-bottom: 2px; }
 .toast-message { font-size: 12px; color: var(--text-muted); }
+.toast-close {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 16px; cursor: pointer; padding: 0 0 0 8px; line-height: 1;
+  flex-shrink: 0; opacity: 0.6;
+}
+.toast-close:hover { opacity: 1; color: var(--text-primary); }
 
 @keyframes toastIn {
   from { transform: translateX(20px); opacity: 0; }
