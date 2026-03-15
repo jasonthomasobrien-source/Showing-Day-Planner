@@ -105,8 +105,10 @@ def _get_travel_times_matrix(addresses: list, departure_dt: datetime) -> dict:
     n = len(addresses)
     matrix = {i: {j: None for j in range(n)} for i in range(n)}
 
-    # Convert departure datetime to Unix timestamp for time-of-day awareness
-    departure_timestamp = int(departure_dt.timestamp())
+    # Convert departure datetime to Unix timestamp for time-of-day awareness.
+    # Google only accepts future times — if the session time is in the past, use now.
+    now_ts = int(datetime.now().timestamp())
+    departure_timestamp = max(int(departure_dt.timestamp()), now_ts + 60)
 
     origins_str = "|".join(addresses)
     destinations_str = "|".join(addresses)
@@ -154,8 +156,13 @@ def _get_return_travel_time(origin: str, destination: str, departure_time=None) 
             "mode": "driving",
             "units": "imperial",
         }
-        if departure_time and isinstance(departure_time, (int, float)):
-            params["departure_time"] = int(departure_time)
+        if departure_time:
+            now_ts = int(datetime.now().timestamp())
+            if isinstance(departure_time, datetime):
+                ts = max(int(departure_time.timestamp()), now_ts + 60)
+            else:
+                ts = max(int(departure_time), now_ts + 60)
+            params["departure_time"] = ts
         resp = requests.get(DISTANCE_MATRIX_URL, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
