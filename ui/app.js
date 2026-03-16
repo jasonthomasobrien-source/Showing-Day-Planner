@@ -97,7 +97,19 @@ function sessionHash(session) {
 }
 
 // ── Screen navigation ──────────────────────────────────────────────────────────
+
+// Ordered screen sequence for back navigation
+const SCREEN_ORDER = ['start', 'route', 'status', 'delivery'];
+
+AppState.screenHistory = [];
+
 function showScreen(name) {
+  // Push current screen to history before switching (skip duplicates)
+  if (AppState.currentScreen && AppState.currentScreen !== name) {
+    AppState.screenHistory.push(AppState.currentScreen);
+    if (AppState.screenHistory.length > 10) AppState.screenHistory.shift();
+  }
+
   $$('.screen').forEach(s => s.classList.remove('active'));
   const target = $(`screen-${name}`);
   if (target) target.classList.add('active');
@@ -107,6 +119,35 @@ function showScreen(name) {
   $$('.nav-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.screen === name);
   });
+
+  updateBackButton();
+}
+
+function goBack() {
+  if (AppState.screenHistory.length === 0) return;
+  const prev = AppState.screenHistory.pop();
+  // Go back without pushing to history again
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  const target = $(`screen-${prev}`);
+  if (target) target.classList.add('active');
+  AppState.currentScreen = prev;
+  $$('.nav-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.screen === prev);
+  });
+  updateBackButton();
+}
+
+function updateBackButton() {
+  const btn = $('btn-back');
+  if (!btn) return;
+  const canGoBack = AppState.screenHistory.length > 0;
+  btn.style.display = canGoBack ? 'flex' : 'none';
+  // Label: show name of previous screen
+  if (canGoBack) {
+    const prevName = AppState.screenHistory[AppState.screenHistory.length - 1];
+    const labels = { start: 'Session Setup', route: 'Route', status: 'Properties', delivery: 'Deliver', clients: 'Clients', settings: 'Settings' };
+    btn.title = `Back to ${labels[prevName] || prevName}`;
+  }
 }
 
 // ── Status bar ─────────────────────────────────────────────────────────────────
@@ -1578,8 +1619,8 @@ function renderPropertyStatusCards() {
       <div class="counter-offer-banner">
         <div class="counter-icon">🟠</div>
         <div class="counter-offer-body">
-          <div class="counter-offer-label">Seller Counter-Offer</div>
-          <div class="counter-offer-time">${prop.counter_time ? `Proposed: ${prop.counter_time}` : 'Seller proposed an alternate time — check ShowingTime for details'}</div>
+          <div class="counter-offer-label">Seller Proposes Another Time</div>
+          <div class="counter-offer-time">${prop.counter_time ? `They can do: ${prop.counter_time}` : 'Seller proposed an alternate time — check ShowingTime for the exact window'}</div>
         </div>
         <div class="counter-offer-actions">
           <button class="btn-counter-accept" onclick="handleCounterOffer('${addr}', ${idx}, 'accept')">✓ Accept</button>
@@ -1712,7 +1753,7 @@ function statusLabel(status) {
     tentative: '🟡 Tentative',
     confirmed: '🟢 Confirmed',
     declined: '🔴 Declined',
-    counter: '🟠 Counter-Offer',
+    counter: '🟠 New Time Proposed',
     'auto-updated': '🔄 Auto-Updated'
   };
   return labels[status] || status;
@@ -2069,8 +2110,8 @@ async function pollSession() {
               : 'Check ShowingTime for access details';
             showToast('✅ Showing Confirmed', `${shortAddr}\n${lockboxMsg}`, 'success', 8000);
           } else if (newProp.status === 'counter') {
-            const counterMsg = newProp.counter_time ? `Proposed: ${newProp.counter_time}` : 'Seller proposed alternate time';
-            showToast('🟠 Counter-Offer', `${shortAddr}\n${counterMsg}`, 'warning', 10000);
+            const counterMsg = newProp.counter_time ? `They can do: ${newProp.counter_time}` : 'Seller proposed an alternate time — check ShowingTime';
+            showToast('🟠 Seller Proposes Another Time', `${shortAddr}\n${counterMsg}`, 'warning', 10000);
           } else if (newProp.status === 'declined') {
             showToast('🔴 Showing Declined', shortAddr, 'error');
           } else {
@@ -3213,7 +3254,7 @@ async function handleCounterOffer(address, idx, action) {
   const prop = AppState.session?.properties?.[idx] || {};
   const counterTime = prop.counter_time || '';
 
-  const actionLabel = action === 'accept' ? 'Accept this time' : 'Decline counter-offer';
+  const actionLabel = action === 'accept' ? 'Accept this time' : 'Decline — keep looking for another window';
   const detail = counterTime
     ? `Proposed time: ${counterTime}`
     : 'Seller proposed an alternate time.';

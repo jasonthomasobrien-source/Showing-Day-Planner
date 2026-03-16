@@ -88,6 +88,29 @@ h3 { font-size: 1.15rem; font-weight: 700; }
   flex-shrink: 0;
 }
 
+#btn-back {
+  display: none; /* shown/hidden by JS */
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+#btn-back:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--white-soft);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .status-bar-brand .logo-icon {
   width: 28px;
   height: 28px;
