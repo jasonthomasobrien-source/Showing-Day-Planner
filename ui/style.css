@@ -3106,3 +3106,223 @@ select option {
   color: rgba(255, 184, 28, 0.6);
   font-style: normal;
 }
+
+/* ── Deliver screen redesign ───────────────────────────────── */
+.delivery-client-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--navy-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dcb-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--white-soft);
+  display: block;
+}
+
+.dcb-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: block;
+}
+
+.delivery-summary-mini {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.dsm-item {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dsm-confirmed { color: var(--status-confirmed); }
+.dsm-pending   { color: var(--text-muted); }
+.dsm-declined  { color: var(--status-declined); }
+
+.delivery-stage {
+  background: var(--navy-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.delivery-stage-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.stage-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 184, 28, 0.15);
+  border: 1px solid rgba(255, 184, 28, 0.3);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stage-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white-soft);
+  margin-bottom: 4px;
+}
+
+.stage-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.delivery-form-inner {
+  padding: 16px 18px;
+}
+
+/* Toggle switch (auto-notify) */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.toggle-switch-wrap {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch-wrap input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.12);
+  border-radius: 100px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch-wrap input:checked + .toggle-slider {
+  background: var(--gold);
+}
+
+.toggle-switch-wrap input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--white-soft);
+  font-weight: 500;
+}
+
+.auto-notify-status {
+  font-size: 12px;
+  color: var(--status-confirmed);
+  padding: 8px 10px;
+  background: rgba(39, 193, 124, 0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(39, 193, 124, 0.2);
+  margin-bottom: 12px;
+}
+
+/* Notification log */
+.notification-log {
+  margin-top: 8px;
+}
+
+.notif-log-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.notif-log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.notif-log-entry:last-child { border-bottom: none; }
+
+.notif-log-icon {
+  font-size: 13px;
+  color: var(--status-confirmed);
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.notif-log-address {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white-soft);
+}
+
+.notif-log-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.sent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--status-confirmed);
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+/* Compact speak button on route cards */
+.btn-speak-sm {
+  padding: 3px 10px;
+  font-size: 11px;
+  margin-left: auto;
+}

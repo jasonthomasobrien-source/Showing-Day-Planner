@@ -406,54 +406,100 @@
   ════════════════════════════════════════════════ -->
   <div class="screen" id="screen-delivery">
 
-    <h2 class="section-title display-font">Deliver to Client</h2>
-    <p class="section-subtitle">Generate the client-facing page and send via Gmail.</p>
+    <div class="screen-header" style="margin-bottom:24px;">
+      <h2 class="section-title display-font" style="margin:0 0 4px;">Client Notifications</h2>
+      <p class="section-subtitle" style="margin:0;">Keep your client informed at every step — from booking to the front door.</p>
+    </div>
 
-    <!-- Summary counts -->
-    <div class="delivery-summary">
-      <div class="delivery-stat">
-        <div class="ds-num" id="delivery-count-confirmed">—</div>
-        <div class="ds-label">Confirmed</div>
+    <!-- Client info bar -->
+    <div class="delivery-client-bar" id="delivery-client-bar">
+      <div class="dcb-info">
+        <span class="dcb-name" id="dcb-client-name">No client selected</span>
+        <span class="dcb-email" id="dcb-client-email">—</span>
       </div>
-      <div class="delivery-stat">
-        <div class="ds-num" id="delivery-count-declined">—</div>
-        <div class="ds-label">Declined</div>
-      </div>
-      <div class="delivery-stat">
-        <div class="ds-num" id="delivery-count-pending">—</div>
-        <div class="ds-label">Pending</div>
+      <div class="delivery-summary-mini">
+        <span class="dsm-item dsm-confirmed"><span id="delivery-count-confirmed">0</span> confirmed</span>
+        <span class="dsm-item dsm-pending"><span id="delivery-count-pending">0</span> pending</span>
+        <span class="dsm-item dsm-declined"><span id="delivery-count-declined">0</span> declined</span>
       </div>
     </div>
 
-    <!-- Build page -->
-    <div class="delivery-form">
-      <div class="section-label">Client Page Options</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-        <input type="checkbox" id="toggle-red-flags" style="width:auto;">
-        <label for="toggle-red-flags" style="font-size:13px;color:var(--text-muted);cursor:pointer;">
-          Include disclosure red flags on client page
+    <!-- ── Step 1: Early Itinerary Preview ── -->
+    <div class="delivery-stage">
+      <div class="delivery-stage-label">
+        <span class="stage-num">1</span>
+        <div>
+          <div class="stage-title">Send Itinerary Preview</div>
+          <div class="stage-desc">Let your client know showings are being arranged. Sends a "here's what we're planning" email with the proposed schedule — showings still show as Pending.</div>
+        </div>
+      </div>
+      <div class="delivery-form-inner">
+        <div class="form-field" style="margin-bottom:14px;">
+          <label>Client Email</label>
+          <input type="email" id="delivery-email" placeholder="Auto-filled from CRM lookup">
+        </div>
+        <button class="btn btn-secondary" id="btn-send-preview">
+          📋 Send Preview — "We're Booking Your Showings"
+        </button>
+        <div id="preview-sent-badge" style="display:none;" class="sent-badge">✓ Preview sent</div>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Auto-Notify on Confirmation ── -->
+    <div class="delivery-stage">
+      <div class="delivery-stage-label">
+        <span class="stage-num">2</span>
+        <div>
+          <div class="stage-title">Auto-Notify on Each Confirmation</div>
+          <div class="stage-desc">When ShowingTime confirms a showing (automatically via webhook or manually), your client receives an immediate alert: address, confirmed time, and next steps.</div>
+        </div>
+      </div>
+      <div class="delivery-form-inner">
+        <label class="toggle-row" id="auto-notify-toggle-row">
+          <div class="toggle-switch-wrap">
+            <input type="checkbox" id="toggle-auto-notify" onchange="toggleAutoNotify(this.checked)">
+            <span class="toggle-slider"></span>
+          </div>
+          <span class="toggle-label">Auto-notify client when each showing is confirmed</span>
         </label>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <button class="btn btn-primary" id="btn-build-page">Build Client Page</button>
-        <a id="client-page-preview-link" href="#" target="_blank" class="btn btn-secondary" style="display:none;">
-          Preview Page
-        </a>
+        <div id="auto-notify-status" class="auto-notify-status" style="display:none;">
+          When the next ShowingTime confirmation arrives, your client will be notified automatically.
+        </div>
+        <!-- Notification log -->
+        <div id="notification-log" class="notification-log"></div>
       </div>
     </div>
 
-    <!-- Send email -->
-    <div class="delivery-form">
-      <div class="section-label">Send to Client</div>
-      <div class="form-field" style="margin-bottom:14px;">
-        <label>Client Email</label>
-        <input type="email" id="delivery-email" placeholder="Auto-filled from CRM lookup">
+    <!-- ── Step 3: Full Itinerary Delivery ── -->
+    <div class="delivery-stage">
+      <div class="delivery-stage-label">
+        <span class="stage-num">3</span>
+        <div>
+          <div class="stage-title">Send Full Showing Day Itinerary</div>
+          <div class="stage-desc">All confirmed showings are finalized. Build the client page and send — includes schedule, property summaries, Google Maps links, and a calendar invite.</div>
+        </div>
       </div>
-      <button class="btn btn-primary btn-lg" id="btn-send-client" style="min-width:200px;">
-        📧 Send to Client
-      </button>
-      <div class="text-xs text-muted mt-8">
-        Gmail API required. If not configured, a copyable email draft will appear below.
+      <div class="delivery-form-inner">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <input type="checkbox" id="toggle-red-flags" style="width:auto;">
+          <label for="toggle-red-flags" style="font-size:13px;color:var(--text-muted);cursor:pointer;">
+            Include disclosure red flags on client page
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-lg" id="btn-build-page" style="min-width:200px;">
+            🏠 Build &amp; Send Full Itinerary
+          </button>
+          <a id="client-page-preview-link" href="#" target="_blank" class="btn btn-secondary" style="display:none;">
+            Preview Page
+          </a>
+        </div>
+        <div class="text-xs text-muted mt-8">
+          Gmail API required. If not configured, a copyable email draft will appear below.
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btn-send-client" style="display:none;margin-top:10px;">
+          📧 Send to Client
+        </button>
       </div>
     </div>
 

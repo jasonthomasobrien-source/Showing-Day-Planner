@@ -1217,8 +1217,13 @@ function renderRoute(routeData) {
         <div class="stop-travel-next">
           <span>🚗</span>
           <span>${stop.travel_to_next_minutes} min to next stop</span>
+          <button class="btn-speak btn-speak-sm" onclick="speakPropertyBrief(this)" data-address="${stop.address}" title="Hear property brief while driving">🔊 Brief</button>
         </div>
-      ` : ''}
+      ` : `
+        <div class="stop-travel-next" style="justify-content:flex-end;">
+          <button class="btn-speak btn-speak-sm" onclick="speakPropertyBrief(this)" data-address="${stop.address}" title="Hear property brief">🔊 Brief</button>
+        </div>
+      `}
     </div>`;
   }).join('');
 
@@ -1977,18 +1982,110 @@ function navigateToDelivery() {
   const declined = props.filter(p => p.status === 'declined').length;
   const pending = props.filter(p => !['confirmed','declined'].includes(p.status)).length;
 
-  const el = id => document.getElementById(id);
-  if (el('delivery-count-confirmed')) el('delivery-count-confirmed').textContent = confirmed;
-  if (el('delivery-count-declined')) el('delivery-count-declined').textContent = declined;
-  if (el('delivery-count-pending')) el('delivery-count-pending').textContent = pending;
+  $('delivery-count-confirmed') && ($('delivery-count-confirmed').textContent = confirmed);
+  $('delivery-count-declined')  && ($('delivery-count-declined').textContent  = declined);
+  $('delivery-count-pending')   && ($('delivery-count-pending').textContent   = pending);
+
+  // Client info bar
+  const client = session?.client;
+  if (client) {
+    const nameEl = $('dcb-client-name');
+    const emailEl = $('dcb-client-email');
+    if (nameEl) nameEl.textContent = client.name || 'Client';
+    if (emailEl) emailEl.textContent = client.email || '—';
+  }
 
   // Pre-fill client email
   const emailInput = $('delivery-email');
-  if (emailInput && session?.client?.email) {
+  if (emailInput && session?.client?.email && !emailInput.value) {
     emailInput.value = session.client.email;
   }
 
+  // Restore auto-notify toggle state from session
+  const autoNotifyEl = $('toggle-auto-notify');
+  if (autoNotifyEl) {
+    autoNotifyEl.checked = session?.auto_notify_client === true;
+    $('auto-notify-status').style.display = autoNotifyEl.checked ? 'block' : 'none';
+  }
+
+  // Render notification log
+  renderNotificationLog(session?.notification_log || []);
+
   showScreen('delivery');
+}
+
+function renderNotificationLog(log) {
+  const el = $('notification-log');
+  if (!el) return;
+  if (!log || log.length === 0) {
+    el.innerHTML = '<div class="notif-log-empty">No notifications sent yet.</div>';
+    return;
+  }
+  el.innerHTML = log.map(entry => `
+    <div class="notif-log-entry">
+      <span class="notif-log-icon">${entry.status === 'sent' ? '✓' : '✕'}</span>
+      <div class="notif-log-body">
+        <div class="notif-log-address">${_escHtml(entry.address || '—')}</div>
+        <div class="notif-log-meta">${_escHtml(entry.type || 'Confirmation alert')} · ${_escHtml(entry.sent_at || '')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleAutoNotify(enabled) {
+  $('auto-notify-status').style.display = enabled ? 'block' : 'none';
+  try {
+    await apiFetch('/api/session/auto-notify', {
+      method: 'POST',
+      body: { enabled }
+    });
+    showToast(
+      enabled ? 'Auto-notify enabled' : 'Auto-notify off',
+      enabled ? 'Client will be alerted for each confirmed showing.' : 'No automatic alerts will be sent.',
+      'info',
+      3500
+    );
+  } catch (e) {
+    // Non-fatal — preference stored locally in toggle state
+  }
+}
+
+async function handleSendPreview() {
+  const email = $('delivery-email')?.value?.trim();
+  if (!email) {
+    showToast('Email required', 'Enter the client email first.', 'warning');
+    return;
+  }
+  const session = AppState.session;
+  const btn = $('btn-send-preview');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending…'; }
+  try {
+    const result = await apiFetch('/api/send-client-email', {
+      method: 'POST',
+      body: {
+        to_email: email,
+        client_name: session?.client?.name || '',
+        email_type: 'preview',
+        session_date: session?.session_date || ''
+      }
+    });
+    if (result.status === 'success') {
+      $('preview-sent-badge').style.display = 'inline-flex';
+      showToast('Preview sent', `${email} will receive the itinerary preview.`, 'success');
+    } else {
+      // Fall back to draft
+      const draft = result.data?.plain_text || '';
+      if (draft) {
+        $('email-draft-body').textContent = draft;
+        $('email-draft-modal').classList.add('visible');
+      }
+      showToast('Gmail not configured', 'Copy the draft below to send manually.', 'warning', 7000);
+    }
+  } catch (e) {
+    showToast('Error', e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '📋 Send Preview — "We\'re Booking Your Showings"'; }
+  }
 }
 
 async function handleBuildClientPage() {
@@ -2015,9 +2112,11 @@ async function handleBuildClientPage() {
     if (result.status === 'success') {
       const path = result.data?.relative_path || '';
       const previewUrl = `/${path}`;
-      $('client-page-preview-link').href = previewUrl;
-      $('client-page-preview-link').style.display = 'inline-flex';
-      showToast('Client page built', 'Ready to preview and send.', 'success');
+      const previewLink = $('client-page-preview-link');
+      if (previewLink) { previewLink.href = previewUrl; previewLink.style.display = 'inline-flex'; }
+      const sendBtn = $('btn-send-client');
+      if (sendBtn) sendBtn.style.display = 'inline-flex';
+      showToast('Client page built', 'Preview or send the full itinerary.', 'success');
     } else {
       showToast('Build failed', result.error || 'Unknown error', 'error');
     }
@@ -2025,7 +2124,7 @@ async function handleBuildClientPage() {
     hidePlan();
     showToast('Error', e.message, 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = 'Build Client Page'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '🏠 Build &amp; Send Full Itinerary'; }
   }
 }
 
@@ -2878,6 +2977,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-goto-delivery')?.addEventListener('click', navigateToDelivery);
 
   // --- Delivery screen ---
+  $('btn-send-preview')?.addEventListener('click', handleSendPreview);
   $('btn-build-page')?.addEventListener('click', handleBuildClientPage);
   $('btn-send-client')?.addEventListener('click', handleSendToClient);
 

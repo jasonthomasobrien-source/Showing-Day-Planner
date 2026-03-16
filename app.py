@@ -695,13 +695,47 @@ def showingtime_webhook():
         if result["status"] == "success":
             parsed = result["data"]
             status = parsed["status"]
+            address = parsed.get("address", "")
 
             if status == "confirmed":
-                update_session({"pending_research": parsed.get("address")})
+                update_session({"pending_research": address})
+
+                # Auto-notify client if enabled
+                sess = get_session()
+                if sess.get("auto_notify_client") and sess.get("client", {}).get("email"):
+                    try:
+                        client = sess["client"]
+                        showing_time = ""
+                        for prop in sess.get("properties", []):
+                            if prop.get("address") == address:
+                                showing_time = prop.get("showing_start", "")
+                                break
+                        notif_result = with_retry(
+                            send_client_email,
+                            client["email"],
+                            client.get("name", ""),
+                            "",  # no page URL for confirmation alerts
+                            sess.get("session_date", ""),
+                            email_type="confirmation_alert",
+                            address=address,
+                            showing_time=showing_time
+                        )
+                        # Log the notification
+                        log_entry = {
+                            "address": address,
+                            "type": "Confirmation alert",
+                            "sent_at": datetime.utcnow().strftime("%I:%M %p UTC"),
+                            "status": "sent" if notif_result.get("status") == "success" else "failed"
+                        }
+                        existing_log = sess.get("notification_log", [])
+                        existing_log.append(log_entry)
+                        update_session({"notification_log": existing_log})
+                    except Exception as notify_err:
+                        app.logger.warning(f"Auto-notify failed: {notify_err}")
 
             return jsonify({
                 "status": "ok",
-                "message": f"Status updated: {parsed.get('address')} → {status}",
+                "message": f"Status updated: {address} → {status}",
                 "lockbox_code": parsed.get("lockbox_code"),
                 "showing_instructions": parsed.get("showing_instructions"),
                 "listing_agent": parsed.get("listing_agent"),
@@ -1241,6 +1275,23 @@ def calendar_events_for_date():
     except Exception as e:
         app.logger.error(f"Calendar events fetch error: {e}")
         return jsonify({'status': 'failure', 'error': str(e), 'data': {'events': []}})
+
+
+# ── Client auto-notify preference ─────────────────────────────────────────────
+
+@app.route("/api/session/auto-notify", methods=["POST"])
+def set_auto_notify():
+    """
+    Store the agent's preference for auto-notifying the client on confirmation.
+    Body: { "enabled": true | false }
+    """
+    try:
+        body = request.get_json() or {}
+        enabled = bool(body.get("enabled", False))
+        update_session({"auto_notify_client": enabled})
+        return jsonify({"status": "success", "data": {"auto_notify_client": enabled}, "error": None})
+    except Exception as e:
+        return api_error(f"Could not save preference: {e}")
 
 
 # ── Error handlers ─────────────────────────────────────────────────────────────
