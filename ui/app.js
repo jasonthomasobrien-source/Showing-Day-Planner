@@ -1573,6 +1573,56 @@ function renderPropertyStatusCards() {
     const order = prop.order || idx + 1;
     const mls = prop.mls_number || '';
 
+    // Build counter-offer banner (only when status = 'counter')
+    const counterBanner = status === 'counter' ? `
+      <div class="counter-offer-banner">
+        <div class="counter-icon">🟠</div>
+        <div class="counter-offer-body">
+          <div class="counter-offer-label">Seller Counter-Offer</div>
+          <div class="counter-offer-time">${prop.counter_time ? `Proposed: ${prop.counter_time}` : 'Seller proposed an alternate time — check ShowingTime for details'}</div>
+        </div>
+        <div class="counter-offer-actions">
+          <button class="btn-counter-accept" onclick="handleCounterOffer('${addr}', ${idx}, 'accept')">✓ Accept</button>
+          <button class="btn-counter-decline" onclick="handleCounterOffer('${addr}', ${idx}, 'decline')">✕ Decline</button>
+        </div>
+      </div>` : '';
+
+    // Build access info panel (only when confirmed and has lockbox/instructions)
+    const hasAccessInfo = status === 'confirmed' && (prop.lockbox_code || prop.showing_instructions || prop.listing_agent);
+    const accessPanel = hasAccessInfo ? `
+      <div class="access-info-panel">
+        <div class="access-info-title">🔑 Access Information</div>
+        ${prop.lockbox_code ? `
+          <div class="access-row">
+            <div class="access-row-label">Lockbox Code</div>
+            <div class="access-row-value"><span class="lockbox-code-value">${prop.lockbox_code}</span></div>
+          </div>` : ''}
+        ${prop.showing_instructions ? `
+          <div class="access-row">
+            <div class="access-row-label">Instructions</div>
+            <div class="access-row-value">${prop.showing_instructions}</div>
+          </div>` : ''}
+        ${prop.listing_agent ? `
+          <div class="access-row">
+            <div class="access-row-label">Listing Agent</div>
+            <div class="access-row-value">${prop.listing_agent}${prop.listing_agent_phone ? ` · ${prop.listing_agent_phone}` : ''}</div>
+          </div>` : ''}
+      </div>` : '';
+
+    // Build feedback section (shown when confirmed or past showing time)
+    const rating = prop.client_rating || '';
+    const feedbackSection = `
+      <div class="feedback-section">
+        <div class="feedback-label">Client Interest</div>
+        <div class="feedback-buttons">
+          <button class="btn-feedback ${rating === 'love' ? 'active-love' : ''}" onclick="handlePropertyFeedback('${addr}', ${idx}, 'love')">❤️ Love it</button>
+          <button class="btn-feedback ${rating === 'like' ? 'active-like' : ''}" onclick="handlePropertyFeedback('${addr}', ${idx}, 'like')">👍 Like it</button>
+          <button class="btn-feedback ${rating === 'pass' ? 'active-pass' : ''}" onclick="handlePropertyFeedback('${addr}', ${idx}, 'pass')">👎 Pass</button>
+        </div>
+        <textarea class="feedback-notes-input" id="feedback-notes-${idx}" rows="2" placeholder="Agent notes: client reaction, questions asked, follow-up needed...">${prop.client_notes || ''}</textarea>
+        <button class="btn-save-feedback" onclick="saveFeedbackNotes('${addr}', ${idx})">Save Notes</button>
+      </div>`;
+
     return `
     <div class="property-card" id="prop-card-${idx}" data-address="${addr}">
       <div class="property-card-header" onclick="togglePropertyCard(${idx})">
@@ -1586,6 +1636,17 @@ function renderPropertyStatusCards() {
         </div>
       </div>
       <div class="property-card-body" id="prop-body-${idx}">
+
+        ${counterBanner}
+        ${accessPanel}
+
+        <!-- MLS # row -->
+        <div class="mls-input-row">
+          <span class="mls-input-label">MLS #</span>
+          <input class="mls-input-field" id="mls-input-${idx}" type="text" placeholder="Enter MLS number..."
+                 value="${mls}" onchange="saveMlsNumber('${addr}', ${idx}, this.value)">
+        </div>
+
         <!-- Status actions -->
         <div class="property-card-actions">
           <span class="action-label">Status:</span>
@@ -1596,26 +1657,26 @@ function renderPropertyStatusCards() {
 
         <!-- ShowingTime request block -->
         <div class="showingtime-checklist">
-          <div class="checklist-label">ShowingTime Request Block</div>
-          <div class="checklist-block" id="checklist-${idx}"><pre style="white-space:pre-wrap;font-size:11px;color:#bccfe0;">═══════════════════════════════════════
-   SHOWINGTIME REQUEST
-═══════════════════════════════════════
-Address:      ${addr}
-MLS Number:   ${mls || 'Unknown — check listing'}
-Date:         ${session?.session_date || '—'}
-Time Window:  ${showStart} – ${showEnd}
-Agent Name:   Jason O'Brien
-Agent Phone:  (check your ShowingTime profile)
-═══════════════════════════════════════
-Submit at showingtime.com or the mobile app</pre></div>
-          <button class="btn btn-sm btn-ghost mt-8" onclick="copyToClipboard('checklist-${idx}')">📋 Copy</button>
+          <div class="checklist-label">ShowingTime Request — Copy &amp; Paste</div>
+          <div class="checklist-block" id="checklist-${idx}"><pre style="white-space:pre-wrap;font-size:11px;color:#bccfe0;">══════════════════════════════════════════
+  SHOWINGTIME REQUEST
+══════════════════════════════════════════
+  Address:     ${addr}
+  MLS Number:  ${mls || '(add MLS # above)'}
+  Date:        ${session?.session_date || '—'}
+  Time Window: ${showStart} – ${showEnd}
+  Agent:       Jason O'Brien, PREMIERE Group
+  Phone:       (your ShowingTime profile)
+  Notes:       Buyer tour — please confirm ASAP
+══════════════════════════════════════════</pre></div>
+          <button class="btn btn-sm btn-ghost mt-8" onclick="copyToClipboard('checklist-${idx}')">📋 Copy Request Block</button>
         </div>
 
         <!-- Property research -->
         <div class="property-research" id="research-${idx}">
           <div id="research-content-${idx}">
             <button class="btn btn-sm btn-secondary" onclick="loadPropertyResearch('${addr}', ${idx})">
-              Load Property Data
+              🏠 Load Property Data
             </button>
           </div>
           <!-- Disclosure upload -->
@@ -1631,6 +1692,8 @@ Submit at showingtime.com or the mobile app</pre></div>
           </div>
           <div id="red-flag-report-${idx}"></div>
         </div>
+
+        ${feedbackSection}
       </div>
     </div>
     `;
@@ -1649,6 +1712,7 @@ function statusLabel(status) {
     tentative: '🟡 Tentative',
     confirmed: '🟢 Confirmed',
     declined: '🔴 Declined',
+    counter: '🟠 Counter-Offer',
     'auto-updated': '🔄 Auto-Updated'
   };
   return labels[status] || status;
@@ -1995,9 +2059,23 @@ async function pollSession() {
       newProps.forEach(newProp => {
         const oldProp = oldProps.find(p => p.address === newProp.address);
         if (oldProp && oldProp.status !== newProp.status) {
-          const msg = `${newProp.address.split(',')[0]} — ${statusLabel(newProp.status)}`;
+          const shortAddr = newProp.address.split(',')[0];
+          const msg = `${shortAddr} — ${statusLabel(newProp.status)}`;
           showWebhookNotification(msg);
-          showToast('Status updated', msg, newProp.status === 'confirmed' ? 'success' : 'info');
+
+          if (newProp.status === 'confirmed') {
+            const lockboxMsg = newProp.lockbox_code
+              ? `Lockbox code: ${newProp.lockbox_code}`
+              : 'Check ShowingTime for access details';
+            showToast('✅ Showing Confirmed', `${shortAddr}\n${lockboxMsg}`, 'success', 8000);
+          } else if (newProp.status === 'counter') {
+            const counterMsg = newProp.counter_time ? `Proposed: ${newProp.counter_time}` : 'Seller proposed alternate time';
+            showToast('🟠 Counter-Offer', `${shortAddr}\n${counterMsg}`, 'warning', 10000);
+          } else if (newProp.status === 'declined') {
+            showToast('🔴 Showing Declined', shortAddr, 'error');
+          } else {
+            showToast('Status updated', msg, 'info');
+          }
         }
       });
 
@@ -3122,6 +3200,203 @@ function _renderCalEvents() {
 
 function _clearCalEvents() {
   document.getElementById('cal-grid')?.querySelectorAll('[data-cal-event]').forEach(e => e.remove());
+}
+
+// ── ShowingTime Integration ────────────────────────────────────────────────────
+
+/**
+ * Handle a counter-offer from ShowingTime: accept or decline.
+ * Accept → marks confirmed and stores accepted time.
+ * Decline → marks declined, prompts re-request.
+ */
+async function handleCounterOffer(address, idx, action) {
+  const prop = AppState.session?.properties?.[idx] || {};
+  const counterTime = prop.counter_time || '';
+
+  const actionLabel = action === 'accept' ? 'Accept this time' : 'Decline counter-offer';
+  const detail = counterTime
+    ? `Proposed time: ${counterTime}`
+    : 'Seller proposed an alternate time.';
+
+  if (!confirm(`${actionLabel}?\n\n${detail}`)) return;
+
+  try {
+    const result = await apiFetch('/api/property/counter-offer', {
+      method: 'POST',
+      body: { address, action, counter_time: counterTime }
+    });
+
+    if (result.status === 'success') {
+      if (action === 'accept') {
+        showToast('✅ Counter-Offer Accepted', `${address.split(',')[0]}${counterTime ? ' · ' + counterTime : ''}`, 'success');
+        // Reload session and re-render
+        AppState.session = (await apiFetch('/api/session')).data;
+        renderPropertyStatusCards();
+        updateStatusBar();
+        // Trigger property research now that it's confirmed
+        loadPropertyResearch(address, idx);
+      } else {
+        showToast('Counter declined', `${address.split(',')[0]} — will need re-requesting`, 'info');
+        AppState.session = (await apiFetch('/api/session')).data;
+        renderPropertyStatusCards();
+        updateStatusBar();
+      }
+    } else {
+      showToast('Error', result.error || 'Could not process counter-offer', 'error');
+    }
+  } catch (e) {
+    showToast('Error', e.message, 'error');
+  }
+}
+
+/**
+ * Toggle client interest rating for a property (love / like / pass).
+ * Updates session state and refreshes button active states in place.
+ */
+async function handlePropertyFeedback(address, idx, rating) {
+  // Toggle: clicking same rating again clears it
+  const prop = AppState.session?.properties?.find(p => p.address === address);
+  const currentRating = prop?.client_rating || '';
+  const newRating = currentRating === rating ? '' : rating;
+
+  try {
+    await apiFetch('/api/property/feedback', {
+      method: 'POST',
+      body: { address, rating: newRating, notes: prop?.client_notes || '' }
+    });
+
+    // Update state locally and re-render just the buttons
+    AppState.session = (await apiFetch('/api/session')).data;
+    renderPropertyStatusCards();
+  } catch (e) {
+    showToast('Error', e.message, 'error');
+  }
+}
+
+/**
+ * Save agent notes from the feedback textarea without changing the rating.
+ */
+async function saveFeedbackNotes(address, idx) {
+  const notesEl = $(`feedback-notes-${idx}`);
+  const notes = notesEl?.value || '';
+  const prop = AppState.session?.properties?.find(p => p.address === address);
+  const rating = prop?.client_rating || '';
+
+  try {
+    await apiFetch('/api/property/feedback', {
+      method: 'POST',
+      body: { address, rating, notes }
+    });
+    AppState.session = (await apiFetch('/api/session')).data;
+    showToast('Notes saved', address.split(',')[0], 'success', 2500);
+  } catch (e) {
+    showToast('Error', e.message, 'error');
+  }
+}
+
+/**
+ * Save an MLS number entered in the property card input.
+ */
+async function saveMlsNumber(address, idx, mlsNumber) {
+  try {
+    const sess = AppState.session;
+    if (!sess?.properties) return;
+    const prop = sess.properties.find(p => p.address === address);
+    if (prop) {
+      prop.mls_number = mlsNumber.trim();
+      await apiFetch('/api/session/update', { method: 'POST', body: { properties: sess.properties } });
+      AppState.session = (await apiFetch('/api/session')).data;
+    }
+  } catch (e) {
+    // silent — user can re-enter
+  }
+}
+
+/**
+ * Export all current session properties as ShowingCart-style request blocks.
+ * Opens a modal with copyable text and per-property MLS# confirmation.
+ */
+async function exportShowingCart() {
+  const btn = $('btn-export-showingcart');
+  if (btn) { btn.disabled = true; btn.textContent = 'Building...'; }
+
+  try {
+    const result = await apiFetch('/api/showingcart');
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '🏡 Export ShowingCart — Copy All Requests'; }
+
+    if (result.status !== 'success') {
+      showToast('ShowingCart', result.error || 'No properties in session', 'warning');
+      return;
+    }
+
+    const { cart_text, blocks, property_count, session_date } = result.data;
+    showShowingCartModal(cart_text, blocks, property_count, session_date);
+
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '🏡 Export ShowingCart — Copy All Requests'; }
+    showToast('Error', e.message, 'error');
+  }
+}
+
+/**
+ * Show the ShowingCart export modal with copyable request blocks.
+ */
+function showShowingCartModal(cartText, blocks, propertyCount, sessionDate) {
+  const existing = $('showingcart-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'showingcart-modal';
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+
+  const blockRows = (blocks || []).map((b, i) => `
+    <div class="cart-block-item">
+      <div class="cart-addr">${i + 1}. ${b.address.split(',')[0]}</div>
+      <div class="cart-time">${b.time || '—'}</div>
+      <div class="cart-mls-input">
+        <span class="cart-mls-label">MLS #:</span>
+        <input class="cart-mls-field" type="text" placeholder="Enter MLS number..." value="${b.mls || ''}"
+               id="cart-mls-${i}" oninput="updateCartText()">
+      </div>
+    </div>
+  `).join('');
+
+  modal.innerHTML = `
+    <div class="modal-box showingcart-modal" style="max-width:600px;width:100%;max-height:90vh;overflow-y:auto;">
+      <h3 style="margin-bottom:4px;">🏡 ShowingCart Export</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
+        ${propertyCount} propert${propertyCount !== 1 ? 'ies' : 'y'} · ${sessionDate || 'this session'}
+        · Copy all blocks below and paste directly into ShowingTime.
+      </p>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">
+          Verify MLS Numbers
+        </div>
+        ${blockRows}
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">
+        Copy &amp; Paste into ShowingTime
+      </div>
+      <div class="showingcart-text-output" id="showingcart-text">${cartText}</div>
+
+      <div class="modal-actions" style="margin-top:16px;gap:10px;">
+        <button class="btn btn-ghost" onclick="$('showingcart-modal').remove()">Close</button>
+        <button class="btn btn-secondary" onclick="navigator.clipboard.writeText($('showingcart-text').textContent).then(()=>showToast('Copied','All request blocks copied to clipboard','success',2500))">
+          📋 Copy All to Clipboard
+        </button>
+        <button class="btn btn-primary" onclick="window.open('https://app.showingtime.com','_blank')">
+          Open ShowingTime →
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
 
 // ── ShowingTime stub ──────────────────────────────────────────────────────────

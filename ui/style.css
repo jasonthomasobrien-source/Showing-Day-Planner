@@ -2673,3 +2673,356 @@ select option {
   flex-shrink: 0;
   margin-left: 6px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   ShowingTime Integration — new components
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Counter-offer status badge ─────────────────────── */
+.badge-counter {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+}
+
+/* ── Counter-offer banner ────────────────────────────── */
+.counter-offer-banner {
+  margin: 0 20px 0;
+  background: rgba(251, 146, 60, 0.08);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.counter-offer-banner .counter-icon { font-size: 18px; flex-shrink: 0; }
+
+.counter-offer-body { flex: 1; min-width: 0; }
+
+.counter-offer-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fb923c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+.counter-offer-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white-soft);
+}
+
+.counter-offer-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-counter-accept {
+  background: rgba(39, 193, 124, 0.15);
+  border: 1px solid rgba(39, 193, 124, 0.4);
+  color: #27c17c;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-counter-accept:hover {
+  background: rgba(39, 193, 124, 0.25);
+}
+
+.btn-counter-decline {
+  background: rgba(224, 85, 85, 0.1);
+  border: 1px solid rgba(224, 85, 85, 0.35);
+  color: var(--status-declined);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-counter-decline:hover {
+  background: rgba(224, 85, 85, 0.2);
+}
+
+/* ── Access info panel (lockbox, instructions, agent) ── */
+.access-info-panel {
+  margin: 0 20px 16px;
+  background: rgba(39, 193, 124, 0.06);
+  border: 1px solid rgba(39, 193, 124, 0.2);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.access-info-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #27c17c;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.access-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.access-row:last-child { margin-bottom: 0; }
+
+.access-row-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 80px;
+  padding-top: 1px;
+  flex-shrink: 0;
+}
+
+.access-row-value {
+  font-size: 13px;
+  color: var(--white-soft);
+  line-height: 1.5;
+}
+
+.lockbox-code-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: 0.15em;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: inline-block;
+}
+
+/* ── Post-showing feedback ───────────────────────────── */
+.feedback-section {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.feedback-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.feedback-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-feedback {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-feedback:hover { border-color: var(--border-strong); color: var(--white-soft); }
+
+.btn-feedback.active-love {
+  background: rgba(255, 70, 70, 0.12);
+  border-color: rgba(255, 70, 70, 0.4);
+  color: #ff6b6b;
+}
+
+.btn-feedback.active-like {
+  background: rgba(255, 184, 28, 0.12);
+  border-color: rgba(255, 184, 28, 0.4);
+  color: var(--gold);
+}
+
+.btn-feedback.active-pass {
+  background: rgba(107, 124, 147, 0.15);
+  border-color: rgba(107, 124, 147, 0.4);
+  color: var(--text-muted);
+}
+
+.feedback-notes-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white-soft);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 8px 10px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.feedback-notes-input:focus {
+  border-color: rgba(255, 184, 28, 0.4);
+}
+
+.feedback-notes-input::placeholder { color: rgba(255,255,255,0.2); }
+
+.btn-save-feedback {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 16px;
+  background: var(--gold);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--navy);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-save-feedback:hover { background: var(--gold-light); }
+
+/* ── ShowingCart export modal ────────────────────────── */
+.showingcart-modal .cart-block-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.showingcart-modal .cart-addr {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white-soft);
+  margin-bottom: 4px;
+}
+
+.showingcart-modal .cart-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.showingcart-modal .cart-mls-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.showingcart-modal .cart-mls-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.showingcart-modal .cart-mls-field {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white-soft);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 5px 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.showingcart-modal .cart-mls-field:focus {
+  border-color: rgba(255, 184, 28, 0.4);
+}
+
+.showingcart-text-output {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--text-mid);
+  white-space: pre-wrap;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 14px;
+}
+
+/* ── Route sidebar ShowingCart button ────────────────── */
+.btn-showingcart {
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  width: 100%;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-showingcart:hover {
+  background: rgba(167, 139, 250, 0.2);
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
+/* ── MLS number input in property card ───────────────── */
+.mls-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.mls-input-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.mls-input-field {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white-soft);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 5px 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.mls-input-field:focus { border-color: rgba(255, 184, 28, 0.4); }
+.mls-input-field::placeholder { color: rgba(255,255,255,0.2); }

@@ -29,6 +29,7 @@ based on actual API Nation → ShowingTime integration output):
 
 import os
 import json
+import re
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -63,8 +64,43 @@ STATUS_MAP = {
     "pending": "pending",
     "requested": "requested",
     "cancelled": "declined",
-    "canceled": "declined"
+    "canceled": "declined",
+    "counter": "counter",
+    "countered": "counter",
+    "counter_offer": "counter",
+    "counteroffer": "counter",
+    "counter-offer": "counter",
+    "alternate": "counter",
+    "alternate_time": "counter",
 }
+
+
+def _extract_lockbox_code(text: str) -> str | None:
+    """
+    Extract a lockbox/keybox access code from a notes string.
+    Looks for common patterns: 'code 4521', 'keybox: 1234', '#9876', etc.
+    Returns the code string or None.
+    """
+    if not text:
+        return None
+    patterns = [
+        r'(?:lockbox|keybox|key\s*box|combo|combination|access\s*code)[:\s#]+(\d{4,8})',
+        r'(?:code)[:\s]+#?(\d{4,8})',
+        r'(?:entry|door)[:\s]+#?(\d{4,8})',
+        r'#\s*(\d{4,8})\b',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _extract_showing_instructions(text: str) -> str | None:
+    """Return clean showing instructions text (strip lockbox code if already extracted separately)."""
+    if not text:
+        return None
+    return text.strip() or None
 
 
 def parse_webhook_payload(payload: dict) -> dict:
@@ -145,6 +181,47 @@ def parse_webhook_payload(payload: dict) -> dict:
             data.get("access_notes") or
             data.get("accessNotes") or
             data.get("instructions") or
+            data.get("seller_instructions") or
+            data.get("showingInstructions") or
+            None
+        )
+
+        # Extract lockbox code from notes or dedicated field
+        lockbox_code = (
+            data.get("lockbox_code") or
+            data.get("lockboxCode") or
+            data.get("access_code") or
+            data.get("accessCode") or
+            _extract_lockbox_code(notes)
+        )
+
+        # Extract showing instructions (keep full notes text)
+        showing_instructions = _extract_showing_instructions(notes)
+
+        # Extract listing agent contact
+        listing_agent = (
+            data.get("listing_agent") or
+            data.get("listingAgent") or
+            data.get("listing_agent_name") or
+            data.get("agent_name") or
+            None
+        )
+
+        listing_agent_phone = (
+            data.get("listing_agent_phone") or
+            data.get("listingAgentPhone") or
+            data.get("agent_phone") or
+            None
+        )
+
+        # Extract counter-offer proposed time (for "counter" status)
+        counter_time = (
+            data.get("counter_time") or
+            data.get("counterTime") or
+            data.get("alternate_time") or
+            data.get("alternateTime") or
+            data.get("proposed_time") or
+            data.get("proposedTime") or
             None
         )
 
@@ -169,15 +246,29 @@ def parse_webhook_payload(payload: dict) -> dict:
             "confirmation_number": confirmation_number,
             "timestamp": timestamp,
             "notes": notes,
+            "lockbox_code": lockbox_code,
+            "showing_instructions": showing_instructions,
+            "listing_agent": listing_agent,
+            "listing_agent_phone": listing_agent_phone,
+            "counter_time": counter_time,
             "auto_updated": True
         }
 
-        # Update session state
+        # Update session state — persist all useful fields onto the property record
         extra = {}
         if confirmation_number:
             extra["confirmation_number"] = confirmation_number
-        if notes:
-            extra["access_notes"] = notes
+        if showing_instructions:
+            extra["showing_instructions"] = showing_instructions
+        if lockbox_code:
+            extra["lockbox_code"] = lockbox_code
+        if listing_agent:
+            extra["listing_agent"] = listing_agent
+        if listing_agent_phone:
+            extra["listing_agent_phone"] = listing_agent_phone
+        if normalized_status == "counter" and counter_time:
+            extra["counter_time"] = counter_time
+        extra["auto_updated"] = True
 
         update_result = update_property_status(address, normalized_status, extra_fields=extra if extra else None)
 
@@ -223,18 +314,33 @@ SAMPLE_PAYLOAD_CONFIRMED = {
         "status": "confirmed",
         "confirmation_number": "ST-2026-84721",
         "timestamp": "2026-03-21T14:32:00Z",
-        "notes": "Keybox on front door. Dog in backyard — please keep gate closed."
+        "notes": "Keybox on front door. Code 4521. Dog in backyard — please keep gate closed.",
+        "listing_agent": "Sue Vander Berg",
+        "listing_agent_phone": "(616) 555-1234",
+        "seller_instructions": "Please remove shoes. Park in driveway only."
+    }
+}
+
+SAMPLE_PAYLOAD_COUNTER = {
+    "type": "showingtime_status",
+    "data": {
+        "address": "4455 Blue Star Hwy, Saugatuck, MI 49453",
+        "status": "counter",
+        "confirmation_number": None,
+        "timestamp": "2026-03-21T15:01:00Z",
+        "counter_time": "3:30 PM – 4:00 PM",
+        "notes": "Seller can do 3:30 PM instead of 2:30 PM."
     }
 }
 
 SAMPLE_PAYLOAD_DECLINED = {
     "type": "showingtime_status",
     "data": {
-        "address": "4455 Blue Star Hwy, Saugatuck, MI 49453",
+        "address": "728 Oak Grove Rd, Plainwell, MI 49080",
         "status": "declined",
         "confirmation_number": None,
         "timestamp": "2026-03-21T15:01:00Z",
-        "notes": "Seller requests rescheduling for next weekend."
+        "notes": "Property unavailable on this date."
     }
 }
 

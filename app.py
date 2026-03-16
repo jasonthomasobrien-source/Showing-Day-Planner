@@ -694,13 +694,18 @@ def showingtime_webhook():
 
         if result["status"] == "success":
             parsed = result["data"]
-            # If confirmed, mark for property research trigger
-            if parsed["status"] == "confirmed":
+            status = parsed["status"]
+
+            if status == "confirmed":
                 update_session({"pending_research": parsed.get("address")})
 
             return jsonify({
                 "status": "ok",
-                "message": f"Status updated: {parsed.get('address')} → {parsed.get('status')}"
+                "message": f"Status updated: {parsed.get('address')} → {status}",
+                "lockbox_code": parsed.get("lockbox_code"),
+                "showing_instructions": parsed.get("showing_instructions"),
+                "listing_agent": parsed.get("listing_agent"),
+                "counter_time": parsed.get("counter_time") if status == "counter" else None,
             })
         else:
             return api_error(result.get("error", "Webhook parse failed"), 400)
@@ -887,6 +892,172 @@ def send_client_email_route():
 
     except Exception as e:
         return api_error(f"Email send failed: {e}")
+
+
+# ── Counter-offer handling ─────────────────────────────────────────────────────
+
+@app.route("/api/property/counter-offer", methods=["POST"])
+def counter_offer_route():
+    """
+    Accept or decline a ShowingTime counter-offer.
+
+    Body: {
+        "address": "123 Main St, Allegan, MI",
+        "action": "accept" | "decline",
+        "counter_time": "3:30 PM – 4:00 PM"
+    }
+    """
+    try:
+        body = request.get_json() or {}
+        address = body.get("address", "").strip()
+        action = body.get("action", "").strip()
+        counter_time = body.get("counter_time", "").strip()
+
+        if not address or action not in ("accept", "decline"):
+            return api_error("address and action ('accept' or 'decline') are required", 400)
+
+        sess = get_session()
+        props = sess.get("properties", [])
+        matched = None
+
+        for prop in props:
+            if address.lower() in prop.get("address", "").lower() or \
+               prop.get("address", "").lower() in address.lower():
+                if action == "accept":
+                    prop["status"] = "confirmed"
+                    prop["counter_accepted"] = True
+                    if counter_time:
+                        prop["counter_accepted_time"] = counter_time
+                        prop["showing_notes"] = f"Counter-offer accepted: {counter_time}"
+                elif action == "decline":
+                    prop["status"] = "declined"
+                    prop["counter_declined"] = True
+                    prop["showing_notes"] = "Counter-offer declined — re-request needed"
+                prop.pop("counter_time", None)
+                matched = prop
+                break
+
+        if not matched:
+            return api_error(f"Property not found in session: {address}", 404)
+
+        update_session({"properties": props})
+        log_tool_call("counter_offer", body, {"status": "success", "data": {"action": action, "address": address}})
+
+        return jsonify({"status": "success", "data": {"action": action, "address": address, "counter_time": counter_time}})
+
+    except Exception as e:
+        return api_error(f"Counter-offer handling failed: {e}")
+
+
+# ── Post-showing feedback ──────────────────────────────────────────────────────
+
+@app.route("/api/property/feedback", methods=["POST"])
+def property_feedback_route():
+    """
+    Store client's post-showing interest rating for a property.
+
+    Body: {
+        "address": "123 Main St, Allegan, MI",
+        "rating": "love" | "like" | "pass",
+        "notes": "Client loved the kitchen, concerned about the basement."
+    }
+    """
+    try:
+        body = request.get_json() or {}
+        address = body.get("address", "").strip()
+        rating = body.get("rating", "").strip()
+        notes = body.get("notes", "").strip()
+
+        if not address:
+            return api_error("address is required", 400)
+        if rating and rating not in ("love", "like", "pass"):
+            return api_error("rating must be 'love', 'like', or 'pass'", 400)
+
+        sess = get_session()
+        props = sess.get("properties", [])
+        matched = None
+
+        for prop in props:
+            if address.lower() in prop.get("address", "").lower() or \
+               prop.get("address", "").lower() in address.lower():
+                prop["client_rating"] = rating
+                prop["client_notes"] = notes
+                prop["rating_timestamp"] = datetime.utcnow().isoformat()
+                matched = prop
+                break
+
+        if not matched:
+            return api_error(f"Property not found in session: {address}", 404)
+
+        update_session({"properties": props})
+        log_tool_call("property_feedback", body, {"status": "success", "data": {"rating": rating}})
+
+        return jsonify({"status": "success", "data": {"address": address, "rating": rating, "notes": notes}})
+
+    except Exception as e:
+        return api_error(f"Feedback save failed: {e}")
+
+
+# ── ShowingCart export ─────────────────────────────────────────────────────────
+
+@app.route("/api/showingcart", methods=["GET"])
+def showingcart_export():
+    """
+    Generate ShowingTime ShowingCart-style request blocks for the current session.
+    Returns a formatted text block — one block per property in optimized order.
+    """
+    try:
+        sess = get_session()
+        props = sess.get("properties", [])
+        client = sess.get("client") or {}
+        session_date = sess.get("session_date", "")
+
+        if not props:
+            return api_error("No properties in current session", 400)
+
+        agent_name = os.getenv("AGENT_NAME", "Jason O'Brien, PREMIERE Group")
+        agent_phone = os.getenv("AGENT_PHONE", "")
+
+        blocks = []
+        for i, prop in enumerate(props, 1):
+            addr = prop.get("address", "")
+            mls = prop.get("mls_number", "")
+            show_start = prop.get("showing_start", "")
+            show_end = prop.get("showing_end", "")
+            status = prop.get("status", "pending")
+            # Skip already-declined properties
+            if status == "declined":
+                continue
+
+            block = (
+                f"══════════════════════════════════════════\n"
+                f"  SHOWINGTIME REQUEST #{i}\n"
+                f"══════════════════════════════════════════\n"
+                f"  Address:     {addr}\n"
+                f"  MLS Number:  {mls or '(check listing)'}\n"
+                f"  Date:        {session_date}\n"
+                f"  Time Window: {show_start} – {show_end}\n"
+                f"  Client:      {client.get('name', '')}\n"
+                f"  Agent:       {agent_name}\n"
+                f"  Phone:       {agent_phone or '(your ShowingTime profile)'}\n"
+                f"  Notes:       Buyer tour — please confirm ASAP\n"
+            )
+            blocks.append({"block": block, "address": addr, "time": f"{show_start} – {show_end}", "mls": mls})
+
+        full_text = "\n".join(b["block"] for b in blocks)
+
+        return jsonify({
+            "status": "success",
+            "data": {
+                "cart_text": full_text,
+                "blocks": blocks,
+                "property_count": len(blocks),
+                "session_date": session_date
+            }
+        })
+
+    except Exception as e:
+        return api_error(f"ShowingCart export failed: {e}")
 
 
 # ── Property status toggle ─────────────────────────────────────────────────────
