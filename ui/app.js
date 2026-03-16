@@ -179,6 +179,10 @@ function updateStatusBar() {
     html += `<span class="status-pill count-pending">${pending} pending</span>`;
   }
 
+  if (AppState.isDemoMode) {
+    html += `<span class="status-pill demo-badge">DEMO</span>`;
+  }
+
   bar.innerHTML = html;
 }
 
@@ -1721,9 +1725,9 @@ function renderPropertyStatusCards() {
         <!-- Property research -->
         <div class="property-research" id="research-${idx}">
           <div id="research-content-${idx}">
-            <button class="btn btn-sm btn-secondary" onclick="loadPropertyResearch('${addr}', ${idx})">
-              🏠 Load Property Data
-            </button>
+            ${AppState.propertyResearch[addr]
+              ? renderPropertyResearchHTML(AppState.propertyResearch[addr], addr)
+              : `<button class="btn btn-sm btn-secondary" onclick="loadPropertyResearch('${addr}', ${idx})">🏠 Load Property Data</button>`}
           </div>
           <!-- Disclosure upload -->
           <div class="disclosure-upload mt-16" id="upload-area-${idx}"
@@ -2454,6 +2458,15 @@ function formatRelativeDate(dateStr) {
 async function loadClientsScreen() {
   const listEl = $('clients-list');
   if (!listEl) return;
+
+  // Demo mode: bypass API and use demo clients
+  if (AppState.isDemoMode) {
+    const clients = DEMO_CLIENTS;
+    _updateClientsStats(clients);
+    renderClientsList(clients);
+    window._allClients = clients;
+    return;
+  }
 
   // Show loading state
   listEl.innerHTML = '<div class="clients-loading"><span class="spinner">⏳</span> Loading clients…</div>';
@@ -3628,51 +3641,161 @@ function _fmt12(timeStr) {
 
 // ── Demo Session ────────────────────────────────────────────────────────────────
 
-const DEMO_SESSION = {
-  client: {
+const DEMO_CLIENTS = [
+  {
+    id: 'demo-client-1',
     name: 'Priya & Raj Sharma',
     email: 'priya.sharma@example.com',
     phone: '(616) 555-0192',
-    crm_source: 'demo'
+    crm_source: 'lofty',
+    past_sessions: 2,
+    future_sessions: 1,
+    last_showing_date: '2026-01-08',
+    next_showing_date: '2026-03-21',
+    sessions: [
+      {
+        date: '2025-11-14',
+        status: 'completed',
+        properties_shown: 4,
+        properties: ['1902 Oak St, Allegan, MI', '540 Lakeview Dr, Otsego, MI', '314 Pine Ave, Plainwell, MI', '2201 River Rd, Allegan, MI']
+      },
+      {
+        date: '2026-01-08',
+        status: 'completed',
+        properties_shown: 3,
+        properties: ['881 Maple Ln, Plainwell, MI', '2040 Hickory Hills Dr, Kalamazoo, MI', '119 Sunset Blvd, Otsego, MI']
+      },
+      {
+        date: '2026-03-21',
+        status: 'in_progress',
+        properties_shown: 4,
+        properties: ['1842 Lincoln Rd, Allegan, MI 49010', '4455 Blue Star Hwy, Saugatuck, MI 49453', '728 Oak Grove Rd, Plainwell, MI 49080', '2291 Maple Ridge Dr, Kalamazoo, MI 49008']
+      }
+    ]
   },
-  session_date: '2026-03-21',
-  start_time: '13:00',
-  end_time: '18:00',
-  max_showing_minutes: 30,
-  direction: 'start-loaded',
-  start_address: 'Plainwell, MI 49080',
-  properties: [
-    {
-      address: '1842 Lincoln Rd, Allegan, MI 49010',
-      status: 'confirmed',
-      showing_start: '1:00 PM',
-      showing_end: '1:30 PM',
-      mls_number: 'MLS-24-089214',
-      confirmation_number: 'ST-2026-84721',
-      lockbox_code: '4521',
-      showing_instructions: 'Keybox on front door. Dog in backyard — keep gate closed.',
-      listing_agent: 'Sue Vander Berg',
-      listing_agent_phone: '(616) 555-1234',
-      auto_updated: true
-    },
-    {
-      address: '4455 Blue Star Hwy, Saugatuck, MI 49453',
-      status: 'counter',
-      showing_start: '2:15 PM',
-      showing_end: '2:45 PM',
-      mls_number: 'MLS-24-091033',
-      counter_time: '3:30 PM – 4:00 PM',
-      notes: 'Seller can do 3:30 PM instead of 2:15 PM.'
-    },
-    {
-      address: '728 Oak Grove Rd, Plainwell, MI 49080',
-      status: 'pending',
-      showing_start: '3:45 PM',
-      showing_end: '4:15 PM',
-      mls_number: ''
-    }
-  ]
-};
+  {
+    id: 'demo-client-2',
+    name: 'Marcus & Dena Williams',
+    email: 'marcuswilliams@example.com',
+    phone: '(269) 555-4471',
+    crm_source: 'ghl',
+    past_sessions: 0,
+    future_sessions: 1,
+    last_showing_date: null,
+    next_showing_date: '2026-04-05',
+    sessions: [
+      {
+        date: '2026-04-05',
+        status: 'upcoming',
+        properties_shown: 0,
+        properties: ['TBD — first-time buyer tour, Allegan County']
+      }
+    ]
+  },
+  {
+    id: 'demo-client-3',
+    name: 'Katherine Chen',
+    email: 'kchen@example.com',
+    phone: '(616) 555-9203',
+    crm_source: 'lofty',
+    past_sessions: 3,
+    future_sessions: 0,
+    last_showing_date: '2026-02-20',
+    next_showing_date: null,
+    sessions: [
+      {
+        date: '2025-08-12',
+        status: 'completed',
+        properties_shown: 5,
+        properties: ['401 River St, Saugatuck, MI', '889 Lakeshore Dr, Douglas, MI', '2100 Blue Star Hwy, Fennville, MI', '44 Harbor View, Saugatuck, MI', '712 Culver St, South Haven, MI']
+      },
+      {
+        date: '2025-10-03',
+        status: 'completed',
+        properties_shown: 3,
+        properties: ['330 Center St, Douglas, MI', '1640 Old Allegan Rd, Fennville, MI', '99 Park Ave, Saugatuck, MI']
+      },
+      {
+        date: '2026-02-20',
+        status: 'completed',
+        properties_shown: 4,
+        properties: ['220 Griffith St, South Haven, MI', '505 Kalamazoo St, South Haven, MI', '810 Erie St, South Haven, MI', '1200 Blue Star Hwy, South Haven, MI']
+      }
+    ]
+  }
+];
+
+const DEMO_PROPERTIES = [
+  {
+    address: '1842 Lincoln Rd, Allegan, MI 49010',
+    status: 'confirmed',
+    order: 1,
+    showing_start: '1:00 PM',
+    showing_end: '1:30 PM',
+    arrival_time: '1:00 PM',
+    travel_to_next_minutes: 27,
+    mls_number: 'MLS-24-089214',
+    confirmation_number: 'ST-2026-84721',
+    lockbox_code: '4521',
+    showing_instructions: 'Keybox on front door. Dog in backyard — keep gate closed. Park in driveway.',
+    listing_agent: 'Sue Vander Berg',
+    listing_agent_phone: '(616) 555-1234',
+    client_rating: 'love',
+    client_notes: 'Priya loved the kitchen and backyard. Raj liked the garage. Top contender.',
+    auto_updated: true,
+    is_return: false
+  },
+  {
+    address: '4455 Blue Star Hwy, Saugatuck, MI 49453',
+    status: 'confirmed',
+    order: 2,
+    showing_start: '2:15 PM',
+    showing_end: '2:45 PM',
+    arrival_time: '2:15 PM',
+    travel_to_next_minutes: 38,
+    mls_number: 'MLS-24-091033',
+    confirmation_number: 'ST-2026-84744',
+    lockbox_code: '8832',
+    showing_instructions: 'Please remove shoes at entry. Use side door — front lock sticks.',
+    listing_agent: 'Mark DeJong',
+    listing_agent_phone: '(269) 555-8877',
+    client_rating: 'like',
+    client_notes: 'Nice but priced high for the lot size. Worth a second look if they come down.',
+    auto_updated: true,
+    is_return: false
+  },
+  {
+    address: '728 Oak Grove Rd, Plainwell, MI 49080',
+    status: 'declined',
+    order: 3,
+    showing_start: '3:45 PM',
+    showing_end: '4:15 PM',
+    arrival_time: '3:45 PM',
+    travel_to_next_minutes: null,
+    mls_number: 'MLS-24-087502',
+    confirmation_number: null,
+    notes: 'Seller unavailable — out-of-town guests this weekend. Contact listing agent to reschedule.',
+    listing_agent: 'Carol Huizenga',
+    listing_agent_phone: '(269) 555-3310',
+    client_rating: null,
+    client_notes: '',
+    is_return: false
+  },
+  {
+    address: '2291 Maple Ridge Dr, Kalamazoo, MI 49008',
+    status: 'pending',
+    order: 4,
+    showing_start: '4:30 PM',
+    showing_end: '5:00 PM',
+    arrival_time: '4:30 PM',
+    travel_to_next_minutes: null,
+    mls_number: 'MLS-24-092114',
+    confirmation_number: null,
+    is_return: false
+  }
+];
+
+const DEMO_ROUTE = DEMO_PROPERTIES;
 
 const DEMO_RESEARCH = {
   '1842 Lincoln Rd, Allegan, MI 49010': {
@@ -3686,7 +3809,7 @@ const DEMO_RESEARCH = {
     tax_estimate: '$3,210/yr',
     zestimate: '$292,400',
     school_district: 'Allegan Public Schools',
-    description: 'Charming ranch on a quiet country road with mature trees and a fully fenced backyard. Hardwood floors throughout main living area, updated kitchen with granite counters and stainless appliances. Primary suite with walk-in closet. Attached 2-car garage. New roof (2021), new HVAC (2019). Move-in ready — seller has already relocated.',
+    description: 'Charming ranch on a quiet country road with mature trees and a fully fenced backyard. Hardwood floors throughout main living area, updated kitchen with granite counters and stainless appliances. Primary suite with walk-in closet and en-suite bath. Attached 2-car garage. New roof (2021), new HVAC (2019). Move-in ready — seller has already relocated.',
     price_history: [{ date: '2026-03-09', event: 'Listed', price: '$289,000' }],
     last_sold_date: '2014-07-22',
     last_sold_price: '$187,500',
@@ -3704,7 +3827,7 @@ const DEMO_RESEARCH = {
     tax_estimate: '$5,640/yr',
     zestimate: '$418,000',
     school_district: 'Saugatuck Public Schools',
-    description: 'Spacious two-story near the Kalamazoo River with open-concept main floor, vaulted ceilings, and a gas fireplace. Four bedrooms upstairs including a generous primary suite with soaker tub. Large deck overlooking a wooded ravine — perfect for summer entertaining. Sellers are motivated: price reduced $15K last week. Home warranty included.',
+    description: 'Spacious two-story near the Kalamazoo River with open-concept main floor, vaulted ceilings, and a gas fireplace. Four bedrooms upstairs including a generous primary suite with soaker tub. Large deck overlooking a wooded ravine. Sellers are motivated — price reduced $15K last week. Home warranty included.',
     price_history: [
       { date: '2026-02-21', event: 'Listed', price: '$440,000' },
       { date: '2026-03-12', event: 'Price Reduced', price: '$425,000' }
@@ -3725,91 +3848,108 @@ const DEMO_RESEARCH = {
     tax_estimate: '$2,480/yr',
     zestimate: '$208,900',
     school_district: 'Plainwell Community Schools',
-    description: 'Solid bi-level on a large corner lot in an established Plainwell neighborhood. Recent updates include new windows (2023) and a refreshed kitchen. Large family room on lower level with walkout to back patio. Single-car attached garage. Great starter home or investment property — priced $20K below Zestimate for quick sale.',
+    description: 'Solid bi-level on a large corner lot in an established Plainwell neighborhood. Recent updates include new windows (2023) and a refreshed kitchen. Large family room on lower level with walkout to back patio. Priced $20K below Zestimate for quick sale.',
     price_history: [{ date: '2026-02-02', event: 'Listed', price: '$212,500' }],
     last_sold_date: '2011-04-14',
     last_sold_price: '$121,000',
     lot_size: '0.31 acres',
     data_source: 'demo'
+  },
+  '2291 Maple Ridge Dr, Kalamazoo, MI 49008': {
+    address: '2291 Maple Ridge Dr, Kalamazoo, MI 49008',
+    price: '$334,900',
+    beds: 4,
+    baths: 3,
+    sqft: 2080,
+    year_built: 1998,
+    days_on_market: 6,
+    tax_estimate: '$4,120/yr',
+    zestimate: '$341,200',
+    school_district: 'Kalamazoo Public Schools',
+    description: 'Well-maintained two-story in a quiet Kalamazoo neighborhood. Open kitchen with island, main-floor office, finished basement rec room. Primary suite with walk-in closet. Three-car garage. Close to WMU and Bronson hospital. Fresh exterior paint (2025). Listing just went live — won\'t last.',
+    price_history: [{ date: '2026-03-15', event: 'Listed', price: '$334,900' }],
+    last_sold_date: '2009-06-30',
+    last_sold_price: '$198,000',
+    lot_size: '0.27 acres',
+    data_source: 'demo'
   }
 };
 
-const DEMO_ROUTE = [
+const DEMO_NOTIFICATION_LOG = [
   {
     address: '1842 Lincoln Rd, Allegan, MI 49010',
-    order: 1,
-    showing_start: '1:00 PM',
-    showing_end: '1:30 PM',
-    drive_time: '18 min',
-    drive_time_seconds: 1080,
-    status: 'confirmed',
-    mls_number: 'MLS-24-089214',
-    is_return: false
+    type: 'Confirmation alert',
+    sent_at: '11:47 AM',
+    status: 'sent'
   },
   {
     address: '4455 Blue Star Hwy, Saugatuck, MI 49453',
-    order: 2,
-    showing_start: '2:15 PM',
-    showing_end: '2:45 PM',
-    drive_time: '27 min',
-    drive_time_seconds: 1620,
-    status: 'counter',
-    mls_number: 'MLS-24-091033',
-    is_return: false
-  },
-  {
-    address: '728 Oak Grove Rd, Plainwell, MI 49080',
-    order: 3,
-    showing_start: '3:45 PM',
-    showing_end: '4:15 PM',
-    drive_time: '38 min',
-    drive_time_seconds: 2280,
-    status: 'pending',
-    mls_number: '',
-    is_return: false
+    type: 'Confirmation alert',
+    sent_at: '12:03 PM',
+    status: 'sent'
   }
 ];
 
 function loadDemoSession() {
-  // Populate AppState
-  AppState.client = { ...DEMO_SESSION.client };
-  AppState.addresses = DEMO_SESSION.properties.map(p => p.address);
-  AppState.startAddress = DEMO_SESSION.start_address;
+  AppState.isDemoMode = true;
+
+  // ── Client ──
+  AppState.client = { ...DEMO_CLIENTS[0] };
+
+  // ── Addresses ──
+  AppState.addresses = DEMO_PROPERTIES.map(p => p.address);
+  AppState.startAddress = 'Plainwell, MI 49080';
   AppState.mode = 'trip';
 
-  // Inject property research into cache
+  // ── Property research cache ──
   Object.assign(AppState.propertyResearch, DEMO_RESEARCH);
 
-  // Build a minimal session object that mirrors session_state.json structure
+  // ── Session object ──
   AppState.session = {
-    session_date: DEMO_SESSION.session_date,
-    client: { ...DEMO_SESSION.client },
-    properties: DEMO_ROUTE.map((stop, i) => ({
-      ...stop,
-      ...DEMO_SESSION.properties[i]
-    })),
-    status: 'in_progress'
+    session_date: '2026-03-21',
+    start_time: '13:00',
+    end_time: '18:00',
+    max_showing_minutes: 30,
+    direction: 'start-loaded',
+    client: { ...DEMO_CLIENTS[0] },
+    properties: DEMO_PROPERTIES,
+    status: 'in_progress',
+    auto_notify_client: true,
+    notification_log: DEMO_NOTIFICATION_LOG
   };
 
   AppState.route = DEMO_ROUTE;
 
-  // Update the status bar
+  // ── Status bar ──
   updateStatusBar();
 
-  // Show a toast
-  showToast(
-    'Demo session loaded',
-    'Priya & Raj Sharma · Sat Mar 21 · 3 properties · Demo data only',
-    'info',
-    6000
-  );
-
-  // Navigate to the route screen and render
+  // ── Route screen ──
   renderRoute({
     route: DEMO_ROUTE,
     total_duration_minutes: 195,
     fits_window: true
   });
+
+  // ── Properties screen — pre-expand confirmed cards with research ──
+  // We navigate to route first, then pre-populate research so clicking Properties works
+  setTimeout(() => {
+    DEMO_PROPERTIES.forEach((prop, idx) => {
+      if (prop.status === 'confirmed') {
+        const contentDiv = $(`research-content-${idx}`);
+        if (contentDiv) {
+          contentDiv.innerHTML = renderPropertyResearchHTML(DEMO_RESEARCH[prop.address], prop.address);
+        }
+      }
+    });
+  }, 150);
+
+  showToast(
+    '✦ Demo loaded',
+    'Priya & Raj Sharma · Sat Mar 21 · 4 properties · 2 confirmed · 1 declined · 1 pending',
+    'info',
+    7000
+  );
+
   showScreen('route');
 }
 
@@ -3828,7 +3968,7 @@ function speakPropertyBrief(buttonEl) {
     _activeSpeech = null;
     $$('.btn-speak.speaking').forEach(b => {
       b.classList.remove('speaking');
-      b.textContent = '🔊 Read to me';
+      b.textContent = b.classList.contains('btn-speak-sm') ? '🔊 Brief' : '🔊 Read to me';
     });
     if (buttonEl.dataset.wasSpeaking) {
       delete buttonEl.dataset.wasSpeaking;
@@ -3844,7 +3984,6 @@ function speakPropertyBrief(buttonEl) {
     return;
   }
 
-  // Build the script
   const shortAddr = address ? address.split(',')[0] : 'this property';
   const price = d?.price || 'price not available';
   const beds = d?.beds || '?';
@@ -3863,7 +4002,6 @@ function speakPropertyBrief(buttonEl) {
   if (dom !== undefined && dom !== null) script += `${dom} days on market. `;
   if (school) script += `School district: ${school}. `;
   if (desc) {
-    // Read first two sentences of description
     const sentences = desc.match(/[^.!?]+[.!?]+/g) || [];
     const preview = sentences.slice(0, 2).join(' ').trim();
     if (preview) script += `Listing notes: ${preview} `;
@@ -3874,31 +4012,30 @@ function speakPropertyBrief(buttonEl) {
   utterance.rate = 0.95;
   utterance.pitch = 1.0;
 
-  // Pick a clear voice if available
   const voices = window.speechSynthesis.getVoices();
   const preferred = voices.find(v =>
     v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Google US') || v.name.includes('Karen'))
   ) || voices.find(v => v.lang.startsWith('en'));
   if (preferred) utterance.voice = preferred;
 
+  const isSm = buttonEl.classList.contains('btn-speak-sm');
   buttonEl.classList.add('speaking');
   buttonEl.dataset.wasSpeaking = '1';
-  buttonEl.textContent = '⏹ Stop reading';
+  buttonEl.textContent = '⏹ Stop';
   _activeSpeech = utterance;
 
   utterance.onend = () => {
     buttonEl.classList.remove('speaking');
-    buttonEl.textContent = '🔊 Read to me';
+    buttonEl.textContent = isSm ? '🔊 Brief' : '🔊 Read to me';
     delete buttonEl.dataset.wasSpeaking;
     _activeSpeech = null;
   };
 
   utterance.onerror = () => {
     buttonEl.classList.remove('speaking');
-    buttonEl.textContent = '🔊 Read to me';
+    buttonEl.textContent = isSm ? '🔊 Brief' : '🔊 Read to me';
     _activeSpeech = null;
   };
 
-  // Chrome bug: voices may not be loaded yet — slight delay
   setTimeout(() => window.speechSynthesis.speak(utterance), 50);
 }
