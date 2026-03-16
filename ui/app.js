@@ -1812,6 +1812,13 @@ async function loadPropertyResearch(address, idx) {
   const contentDiv = $(`research-content-${idx}`);
   if (!contentDiv) return;
 
+  // Use cached demo/research data without hitting the API
+  if (AppState.propertyResearch[address]) {
+    const cached = AppState.propertyResearch[address];
+    contentDiv.innerHTML = renderPropertyResearchHTML(cached, address);
+    return;
+  }
+
   contentDiv.innerHTML = '<div class="loading">Loading property data... <span class="spinner"></span></div>';
 
   try {
@@ -1823,7 +1830,7 @@ async function loadPropertyResearch(address, idx) {
     if (result.status === 'success') {
       const d = result.data;
       AppState.propertyResearch[address] = d;
-      contentDiv.innerHTML = renderPropertyResearchHTML(d);
+      contentDiv.innerHTML = renderPropertyResearchHTML(d, address);
       showToast('Property data loaded', `${address.split(',')[0]}`, 'success');
     } else {
       contentDiv.innerHTML = `<div class="text-muted text-sm">Data unavailable — ${result.error || 'could not fetch listing'}</div>`;
@@ -1833,7 +1840,7 @@ async function loadPropertyResearch(address, idx) {
   }
 }
 
-function renderPropertyResearchHTML(d) {
+function renderPropertyResearchHTML(d, address) {
   if (!d) return '<div class="text-muted text-sm">No data</div>';
   const stats = [
     { label: 'Price', value: d.price || '—' },
@@ -1846,6 +1853,8 @@ function renderPropertyResearchHTML(d) {
     { label: 'Zestimate', value: d.zestimate || '—' }
   ];
 
+  const addrAttr = address ? ` data-address="${_escHtml(address)}"` : '';
+
   return `
     <div class="property-stats">
       ${stats.map(s => `
@@ -1857,7 +1866,14 @@ function renderPropertyResearchHTML(d) {
     </div>
     ${d.school_district ? `<div class="text-muted text-sm" style="margin-bottom:8px;">School District: ${d.school_district}</div>` : ''}
     ${d.description ? `<div class="property-description">${d.description.slice(0, 350)}${d.description.length > 350 ? '...' : ''}</div>` : ''}
-    ${d.data_source === 'mock' ? '<div class="text-xs text-muted" style="margin-top:4px;font-style:italic;">Mock data — implement Zillow scraper for live listing data</div>' : ''}
+    <div class="research-actions">
+      <button class="btn-speak" onclick="speakPropertyBrief(this)"${addrAttr} title="Read property summary aloud">
+        🔊 Read to me
+      </button>
+    </div>
+    <div class="data-disclaimer">
+      <strong>Data source:</strong> ${d.data_source === 'demo' ? 'Demo data — for illustration only. Not from MLS or Zillow.' : d.data_source === 'mock' ? 'Estimated data — connect Zillow scraper or Bridge API for live listing data.' : 'Zillow / public records — verify details with MLS before showing.'}
+    </div>
   `;
 }
 
@@ -3508,4 +3524,281 @@ function _fmt12(timeStr) {
   const suffix = h < 12 ? 'am' : 'pm';
   const hh     = h % 12 || 12;
   return m ? `${hh}:${String(m).padStart(2,'0')}${suffix}` : `${hh}${suffix}`;
+}
+
+// ── Demo Session ────────────────────────────────────────────────────────────────
+
+const DEMO_SESSION = {
+  client: {
+    name: 'Priya & Raj Sharma',
+    email: 'priya.sharma@example.com',
+    phone: '(616) 555-0192',
+    crm_source: 'demo'
+  },
+  session_date: '2026-03-21',
+  start_time: '13:00',
+  end_time: '18:00',
+  max_showing_minutes: 30,
+  direction: 'start-loaded',
+  start_address: 'Plainwell, MI 49080',
+  properties: [
+    {
+      address: '1842 Lincoln Rd, Allegan, MI 49010',
+      status: 'confirmed',
+      showing_start: '1:00 PM',
+      showing_end: '1:30 PM',
+      mls_number: 'MLS-24-089214',
+      confirmation_number: 'ST-2026-84721',
+      lockbox_code: '4521',
+      showing_instructions: 'Keybox on front door. Dog in backyard — keep gate closed.',
+      listing_agent: 'Sue Vander Berg',
+      listing_agent_phone: '(616) 555-1234',
+      auto_updated: true
+    },
+    {
+      address: '4455 Blue Star Hwy, Saugatuck, MI 49453',
+      status: 'counter',
+      showing_start: '2:15 PM',
+      showing_end: '2:45 PM',
+      mls_number: 'MLS-24-091033',
+      counter_time: '3:30 PM – 4:00 PM',
+      notes: 'Seller can do 3:30 PM instead of 2:15 PM.'
+    },
+    {
+      address: '728 Oak Grove Rd, Plainwell, MI 49080',
+      status: 'pending',
+      showing_start: '3:45 PM',
+      showing_end: '4:15 PM',
+      mls_number: ''
+    }
+  ]
+};
+
+const DEMO_RESEARCH = {
+  '1842 Lincoln Rd, Allegan, MI 49010': {
+    address: '1842 Lincoln Rd, Allegan, MI 49010',
+    price: '$289,000',
+    beds: 3,
+    baths: 2,
+    sqft: 1842,
+    year_built: 1987,
+    days_on_market: 12,
+    tax_estimate: '$3,210/yr',
+    zestimate: '$292,400',
+    school_district: 'Allegan Public Schools',
+    description: 'Charming ranch on a quiet country road with mature trees and a fully fenced backyard. Hardwood floors throughout main living area, updated kitchen with granite counters and stainless appliances. Primary suite with walk-in closet. Attached 2-car garage. New roof (2021), new HVAC (2019). Move-in ready — seller has already relocated.',
+    price_history: [{ date: '2026-03-09', event: 'Listed', price: '$289,000' }],
+    last_sold_date: '2014-07-22',
+    last_sold_price: '$187,500',
+    lot_size: '0.62 acres',
+    data_source: 'demo'
+  },
+  '4455 Blue Star Hwy, Saugatuck, MI 49453': {
+    address: '4455 Blue Star Hwy, Saugatuck, MI 49453',
+    price: '$425,000',
+    beds: 4,
+    baths: '2.5',
+    sqft: 2210,
+    year_built: 2002,
+    days_on_market: 28,
+    tax_estimate: '$5,640/yr',
+    zestimate: '$418,000',
+    school_district: 'Saugatuck Public Schools',
+    description: 'Spacious two-story near the Kalamazoo River with open-concept main floor, vaulted ceilings, and a gas fireplace. Four bedrooms upstairs including a generous primary suite with soaker tub. Large deck overlooking a wooded ravine — perfect for summer entertaining. Sellers are motivated: price reduced $15K last week. Home warranty included.',
+    price_history: [
+      { date: '2026-02-21', event: 'Listed', price: '$440,000' },
+      { date: '2026-03-12', event: 'Price Reduced', price: '$425,000' }
+    ],
+    last_sold_date: '2018-09-05',
+    last_sold_price: '$298,000',
+    lot_size: '0.88 acres',
+    data_source: 'demo'
+  },
+  '728 Oak Grove Rd, Plainwell, MI 49080': {
+    address: '728 Oak Grove Rd, Plainwell, MI 49080',
+    price: '$212,500',
+    beds: 3,
+    baths: 1,
+    sqft: 1440,
+    year_built: 1972,
+    days_on_market: 41,
+    tax_estimate: '$2,480/yr',
+    zestimate: '$208,900',
+    school_district: 'Plainwell Community Schools',
+    description: 'Solid bi-level on a large corner lot in an established Plainwell neighborhood. Recent updates include new windows (2023) and a refreshed kitchen. Large family room on lower level with walkout to back patio. Single-car attached garage. Great starter home or investment property — priced $20K below Zestimate for quick sale.',
+    price_history: [{ date: '2026-02-02', event: 'Listed', price: '$212,500' }],
+    last_sold_date: '2011-04-14',
+    last_sold_price: '$121,000',
+    lot_size: '0.31 acres',
+    data_source: 'demo'
+  }
+};
+
+const DEMO_ROUTE = [
+  {
+    address: '1842 Lincoln Rd, Allegan, MI 49010',
+    order: 1,
+    showing_start: '1:00 PM',
+    showing_end: '1:30 PM',
+    drive_time: '18 min',
+    drive_time_seconds: 1080,
+    status: 'confirmed',
+    mls_number: 'MLS-24-089214',
+    is_return: false
+  },
+  {
+    address: '4455 Blue Star Hwy, Saugatuck, MI 49453',
+    order: 2,
+    showing_start: '2:15 PM',
+    showing_end: '2:45 PM',
+    drive_time: '27 min',
+    drive_time_seconds: 1620,
+    status: 'counter',
+    mls_number: 'MLS-24-091033',
+    is_return: false
+  },
+  {
+    address: '728 Oak Grove Rd, Plainwell, MI 49080',
+    order: 3,
+    showing_start: '3:45 PM',
+    showing_end: '4:15 PM',
+    drive_time: '38 min',
+    drive_time_seconds: 2280,
+    status: 'pending',
+    mls_number: '',
+    is_return: false
+  }
+];
+
+function loadDemoSession() {
+  // Populate AppState
+  AppState.client = { ...DEMO_SESSION.client };
+  AppState.addresses = DEMO_SESSION.properties.map(p => p.address);
+  AppState.startAddress = DEMO_SESSION.start_address;
+  AppState.mode = 'trip';
+
+  // Inject property research into cache
+  Object.assign(AppState.propertyResearch, DEMO_RESEARCH);
+
+  // Build a minimal session object that mirrors session_state.json structure
+  AppState.session = {
+    session_date: DEMO_SESSION.session_date,
+    client: { ...DEMO_SESSION.client },
+    properties: DEMO_ROUTE.map((stop, i) => ({
+      ...stop,
+      ...DEMO_SESSION.properties[i]
+    })),
+    status: 'in_progress'
+  };
+
+  AppState.route = DEMO_ROUTE;
+
+  // Update the status bar
+  updateStatusBar();
+
+  // Show a toast
+  showToast(
+    'Demo session loaded',
+    'Priya & Raj Sharma · Sat Mar 21 · 3 properties · Demo data only',
+    'info',
+    6000
+  );
+
+  // Navigate to the route screen and render
+  renderRoute({
+    route: DEMO_ROUTE,
+    total_duration_minutes: 195,
+    fits_window: true
+  });
+  showScreen('route');
+}
+
+// ── Text-to-Speech — "Read to me" ──────────────────────────────────────────────
+
+let _activeSpeech = null;
+
+/**
+ * Build a natural-language property brief from research data and speak it.
+ * @param {HTMLElement} buttonEl - the button element that was clicked (for state)
+ */
+function speakPropertyBrief(buttonEl) {
+  // Stop any active speech first
+  if (_activeSpeech || window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    _activeSpeech = null;
+    $$('.btn-speak.speaking').forEach(b => {
+      b.classList.remove('speaking');
+      b.textContent = '🔊 Read to me';
+    });
+    if (buttonEl.dataset.wasSpeaking) {
+      delete buttonEl.dataset.wasSpeaking;
+      return; // toggle off
+    }
+  }
+
+  const address = buttonEl.dataset.address;
+  const d = AppState.propertyResearch[address];
+
+  if (!d && !address) {
+    showToast('No data', 'No property data available to read.', 'warning');
+    return;
+  }
+
+  // Build the script
+  const shortAddr = address ? address.split(',')[0] : 'this property';
+  const price = d?.price || 'price not available';
+  const beds = d?.beds || '?';
+  const baths = d?.baths || '?';
+  const sqft = d?.sqft ? Number(d.sqft).toLocaleString() : null;
+  const yearBuilt = d?.year_built;
+  const dom = d?.days_on_market;
+  const school = d?.school_district;
+  const desc = d?.description;
+
+  let script = `Here's your brief for ${shortAddr}. `;
+  script += `Listed at ${price}. `;
+  if (beds && baths) script += `${beds} bedrooms, ${baths} bathrooms. `;
+  if (sqft) script += `${sqft} square feet. `;
+  if (yearBuilt) script += `Built in ${yearBuilt}. `;
+  if (dom !== undefined && dom !== null) script += `${dom} days on market. `;
+  if (school) script += `School district: ${school}. `;
+  if (desc) {
+    // Read first two sentences of description
+    const sentences = desc.match(/[^.!?]+[.!?]+/g) || [];
+    const preview = sentences.slice(0, 2).join(' ').trim();
+    if (preview) script += `Listing notes: ${preview} `;
+  }
+  script += 'Good luck on the showing!';
+
+  const utterance = new SpeechSynthesisUtterance(script);
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+
+  // Pick a clear voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Google US') || v.name.includes('Karen'))
+  ) || voices.find(v => v.lang.startsWith('en'));
+  if (preferred) utterance.voice = preferred;
+
+  buttonEl.classList.add('speaking');
+  buttonEl.dataset.wasSpeaking = '1';
+  buttonEl.textContent = '⏹ Stop reading';
+  _activeSpeech = utterance;
+
+  utterance.onend = () => {
+    buttonEl.classList.remove('speaking');
+    buttonEl.textContent = '🔊 Read to me';
+    delete buttonEl.dataset.wasSpeaking;
+    _activeSpeech = null;
+  };
+
+  utterance.onerror = () => {
+    buttonEl.classList.remove('speaking');
+    buttonEl.textContent = '🔊 Read to me';
+    _activeSpeech = null;
+  };
+
+  // Chrome bug: voices may not be loaded yet — slight delay
+  setTimeout(() => window.speechSynthesis.speak(utterance), 50);
 }
